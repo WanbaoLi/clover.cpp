@@ -20,12 +20,12 @@
 #include "lib_alt_QXS/Fopr/afopr_Clover.h"
 #include "lib_alt_QXS/Fopr/afopr_Clover_dd.h"
 #include "lib_alt_QXS/Fopr/afopr_Clover_eo.h"
-#include "lib_alt_QXS/Fopr/afopr_Staggered.h"
-#include "lib_alt_QXS/Fopr/afopr_Staggered_eo.h"
-#include "lib_alt_QXS/Fopr/afopr_Domainwall_5din.h"
-#include "lib_alt_QXS/Fopr/afopr_Domainwall_5din_eo.h"
-#include "lib/Fopr/afopr_Domainwall.h"
-#include "lib/Fopr/afopr_Domainwall_eo.h"
+// pruned: #include "lib_alt_QXS/Fopr/afopr_Staggered.h"
+// pruned: #include "lib_alt_QXS/Fopr/afopr_Staggered_eo.h"
+// pruned: #include "lib_alt_QXS/Fopr/afopr_Domainwall_5din.h"
+// pruned: #include "lib_alt_QXS/Fopr/afopr_Domainwall_5din_eo.h"
+// pruned: #include "lib/Fopr/afopr_Domainwall.h"
+// pruned: #include "lib/Fopr/afopr_Domainwall_eo.h"
 //#include "lib_alt_QXS/Fopr/afopr_Clover_Chemical.h"
 //#include "lib/Fopr/afopr_Smeared.h"
 //#include "lib/Fopr/afopr_Rational.h"
@@ -41,13 +41,13 @@ bool AFopr<AField<double, QXS> >::init_factory()
   result &= AFopr_Clover<AFIELD>::register_factory();
   result &= AFopr_Clover_dd<AFIELD>::register_factory();
   result &= AFopr_Clover_eo<AFIELD>::register_factory();
-  result &= AFopr_Staggered<AFIELD>::register_factory();
-  result &= AFopr_Staggered_eo<AFIELD>::register_factory();
-  result &= AFopr_Domainwall_5din<AFIELD>::register_factory();
-  result &= AFopr_Domainwall_5din_eo<AFIELD>::register_factory();
-  result &= AFopr_Domainwall<AFIELD>::register_factory();
-  result &= AFopr_Domainwall_eo<AFIELD>::register_factory();
-  //  result &= AFopr_Clover_Chemical<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Staggered<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Staggered_eo<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall_5din<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall_5din_eo<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall_eo<AFIELD>::register_factory();
+// pruned:   //  result &= AFopr_Clover_Chemical<AFIELD>::register_factory();
   //  result &= AFopr_Smeared<AFIELD>::register_factory();
   //  result &= AFopr_Rational<AFIELD>::register_factory();
   return result;
@@ -64,13 +64,13 @@ bool AFopr<AField<float, QXS> >::init_factory()
   result &= AFopr_Clover<AFIELD>::register_factory();
   result &= AFopr_Clover_dd<AFIELD>::register_factory();
   result &= AFopr_Clover_eo<AFIELD>::register_factory();
-  result &= AFopr_Staggered<AFIELD>::register_factory();
-  result &= AFopr_Staggered_eo<AFIELD>::register_factory();
-  result &= AFopr_Domainwall_5din<AFIELD>::register_factory();
-  result &= AFopr_Domainwall_5din_eo<AFIELD>::register_factory();
-  result &= AFopr_Domainwall<AFIELD>::register_factory();
-  result &= AFopr_Domainwall_eo<AFIELD>::register_factory();
-  // result &= AFopr_Clover_Chemical<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Staggered<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Staggered_eo<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall_5din<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall_5din_eo<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall<AFIELD>::register_factory();
+// pruned:   result &= AFopr_Domainwall_eo<AFIELD>::register_factory();
+// pruned:   // result &= AFopr_Clover_Chemical<AFIELD>::register_factory();
   // result &= AFopr_Smeared<AFIELD>::register_factory();
   // result &= AFopr_Rational<AFIELD>::register_factory();
   return result;

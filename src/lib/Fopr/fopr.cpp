@@ -29,65 +29,65 @@
 #include "Imp/fopr_Wilson_eo_impl.h"
 #include "fopr_Clover.h"
 #include "fopr_Clover_eo.h"
-#include "fopr_Domainwall.h"
-#include "fopr_Overlap.h"
-#include "fopr_Sign.h"
+// pruned: #include "fopr_Domainwall.h"
+// pruned: #include "fopr_Overlap.h"
+// pruned: #include "fopr_Sign.h"
 #include "fopr_Rational.h"
 #include "fopr_Smeared.h"
 //#include "fopr_Smeared_alt.h"
 #include "fopr_Smeared_eo.h"
-#include "fopr_Chebyshev.h"
-#include "fopr_Wilson_TwistedMass.h"
-#include "fopr_WilsonGeneral.h"
-#include "Org/fopr_WilsonGeneral_impl.h"
-#include "Imp/fopr_WilsonGeneral_impl.h"
-#include "fopr_CloverGeneral.h"
-#include "fopr_Wilson_Chemical.h"
-#include "fopr_Clover_Chemical.h"
-#include "fopr_Staggered.h"
-#include "fopr_Staggered_eo.h"
-#include "fopr_Wilson_SF.h"
-#include "fopr_Clover_SF.h"
-#include "fopr_Rational_SF.h"
+// pruned: #include "fopr_Chebyshev.h"
+// pruned: #include "fopr_Wilson_TwistedMass.h"
+// pruned: #include "fopr_WilsonGeneral.h"
+// pruned: #include "Org/fopr_WilsonGeneral_impl.h"
+// pruned: #include "Imp/fopr_WilsonGeneral_impl.h"
+// pruned: #include "fopr_CloverGeneral.h"
+// pruned: #include "fopr_Wilson_Chemical.h"
+// pruned: #include "fopr_Clover_Chemical.h"
+// pruned: #include "fopr_Staggered.h"
+// pruned: #include "fopr_Staggered_eo.h"
+// pruned: #include "fopr_Wilson_SF.h"
+// pruned: #include "fopr_Clover_SF.h"
+// pruned: #include "fopr_Rational_SF.h"
 #include "fopr_NonRelativistic.h"
-#include "fopr_CRS.h"
+// pruned: #include "fopr_CRS.h"
 
 template<>
 bool Fopr::init_factory()
 {
   bool result = true;
   result &= Selector_Fopr_Wilson::register_factory();
-  result &= Org::Fopr_Wilson::register_factory();
+// pruned:   result &= Org::Fopr_Wilson::register_factory();
   result &= Imp::Fopr_Wilson::register_factory();
   result &= Selector_Fopr_Wilson_eo::register_factory();
-  result &= Org::Fopr_Wilson_eo::register_factory();
+// pruned:   result &= Org::Fopr_Wilson_eo::register_factory();
   result &= Imp::Fopr_Wilson_eo::register_factory();
   result &= Fopr_Clover::register_factory();
   result &= Fopr_Clover_eo::register_factory();
-  result &= Fopr_Domainwall::register_factory();
-  result &= Fopr_Overlap::register_factory();
-  result &= Fopr_Sign::register_factory();
+// pruned:   result &= Fopr_Domainwall::register_factory();
+// pruned:   result &= Fopr_Overlap::register_factory();
+// pruned:   result &= Fopr_Sign::register_factory();
   result &= Fopr_Rational::register_factory();
   result &= Fopr_Smeared::register_factory();
 #ifdef USE_ALT_CODE
   //  result &= Fopr_Smeared_alt::register_factory();
 #endif
   result &= Fopr_Smeared_eo::register_factory();
-  result &= Fopr_Chebyshev::register_factory();
-  result &= Fopr_Wilson_TwistedMass::register_factory();
-  result &= Selector_Fopr_WilsonGeneral::register_factory();
-  result &= Org::Fopr_WilsonGeneral::register_factory();
-  result &= Imp::Fopr_WilsonGeneral::register_factory();
-  result &= Fopr_CloverGeneral::register_factory();
-  result &= Fopr_Wilson_Chemical::register_factory();
-  result &= Fopr_Clover_Chemical::register_factory();
-  result &= Fopr_Staggered::register_factory();
-  result &= Fopr_Staggered_eo::register_factory();
-  result &= Fopr_Wilson_SF::register_factory();
-  result &= Fopr_Clover_SF::register_factory();
-  result &= Fopr_Rational_SF::register_factory();
-  result &= Fopr_NonRelativistic::register_factory();
-  result &= Fopr_CRS::register_factory();
+// pruned:   result &= Fopr_Chebyshev::register_factory();
+// pruned:   result &= Fopr_Wilson_TwistedMass::register_factory();
+// pruned:   result &= Selector_Fopr_WilsonGeneral::register_factory();
+// pruned:   result &= Org::Fopr_WilsonGeneral::register_factory();
+// pruned:   result &= Imp::Fopr_WilsonGeneral::register_factory();
+// pruned:   result &= Fopr_CloverGeneral::register_factory();
+// pruned:   result &= Fopr_Wilson_Chemical::register_factory();
+// pruned:   result &= Fopr_Clover_Chemical::register_factory();
+// pruned:   result &= Fopr_Staggered::register_factory();
+// pruned:   result &= Fopr_Staggered_eo::register_factory();
+// pruned:   result &= Fopr_Wilson_SF::register_factory();
+// pruned:   result &= Fopr_Clover_SF::register_factory();
+// pruned:   result &= Fopr_Rational_SF::register_factory();
+// pruned:   result &= Fopr_NonRelativistic::register_factory();
+// pruned:   result &= Fopr_CRS::register_factory();
 
   return result;
 }

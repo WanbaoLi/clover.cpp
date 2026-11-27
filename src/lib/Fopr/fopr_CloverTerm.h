@@ -45,7 +45,7 @@
 // implementations
 
 #ifdef USE_ORG
-#include "Org/fopr_CloverTerm_impl.h"
+// pruned: #include "Org/fopr_CloverTerm_impl.h"
 #endif
 
 #ifdef USE_IMP

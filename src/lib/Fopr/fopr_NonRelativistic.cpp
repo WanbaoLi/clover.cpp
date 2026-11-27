@@ -14,7 +14,7 @@
 
 #ifdef USE_FACTORY_AUTOREGISTER
 namespace {
-  bool init = Fopr_NonRelativistic::register_factory();
+// pruned:   bool init = Fopr_NonRelativistic::register_factory();
 }
 #endif
 

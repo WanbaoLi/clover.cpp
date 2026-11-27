@@ -15,7 +15,7 @@
 
 #include "randomNumbers_Mseries.h"
 #include "randomNumbers_MT19937.h"
-#include "randomNumbers_SFMT.h"
+// pruned: #include "randomNumbers_SFMT.h"
 
 const std::string RandomNumberManager::class_name = "RandomNumberManager";
 

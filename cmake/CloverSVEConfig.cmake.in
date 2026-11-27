@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+find_dependency(MPI COMPONENTS CXX)
+find_dependency(OpenMP COMPONENTS CXX)
+if(@CLOVER_OPENACC@)
+  find_dependency(OpenACC)
+endif()
+include("${CMAKE_CURRENT_LIST_DIR}/CloverSVETargets.cmake")

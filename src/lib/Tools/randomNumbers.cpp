@@ -27,7 +27,7 @@
 #include "randomNumbers_Mseries.h"
 #include "randomNumbers_MT19937.h"
 #ifdef USE_SFMTLIB
-#include "randomNumbers_SFMT.h"
+// pruned: #include "randomNumbers_SFMT.h"
 #endif
 
 bool RandomNumbers::init_factory()
@@ -37,7 +37,7 @@ bool RandomNumbers::init_factory()
   result &= RandomNumbers_Mseries::register_factory();
   result &= RandomNumbers_MT19937::register_factory();
 #ifdef USE_SFMTLIB
-  result &= RandomNumbers_SFMT::register_factory();
+// pruned:   result &= RandomNumbers_SFMT::register_factory();
 #endif
 
   return result;

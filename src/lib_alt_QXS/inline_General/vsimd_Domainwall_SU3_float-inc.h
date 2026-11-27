@@ -1,1 +1,0 @@
-vsimd_Domainwall_SU3_double-inc.h

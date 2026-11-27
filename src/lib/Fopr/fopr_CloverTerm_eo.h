@@ -18,7 +18,7 @@
 
 // original unoptimised version
 #ifdef USE_ORG
-#include "Org/fopr_CloverTerm_eo_impl.h"
+// pruned: #include "Org/fopr_CloverTerm_eo_impl.h"
 #endif
 
 // improved version

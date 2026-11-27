@@ -1,1 +1,1 @@
-vsimd_Wilson_SU3_double-inc.h
+#include "vsimd_Wilson_SU3_double-inc.h"

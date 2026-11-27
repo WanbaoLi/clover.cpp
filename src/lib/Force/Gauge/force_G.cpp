@@ -21,8 +21,8 @@
 
 #include "force_G_Plaq.h"
 #include "force_G_Rectangle.h"
-#include "force_G_Plaq_SF.h"
-#include "force_G_Rectangle_SF.h"
+// pruned: #include "force_G_Plaq_SF.h"
+// pruned: #include "force_G_Rectangle_SF.h"
 
 bool Force_G::init_factory()
 {
@@ -30,8 +30,8 @@ bool Force_G::init_factory()
 
   result &= Force_G_Plaq::register_factory();
   result &= Force_G_Rectangle::register_factory();
-  result &= Force_G_Plaq_SF::register_factory();
-  result &= Force_G_Rectangle_SF::register_factory();
+// pruned:   result &= Force_G_Plaq_SF::register_factory();
+// pruned:   result &= Force_G_Rectangle_SF::register_factory();
 
   return result;
 }
