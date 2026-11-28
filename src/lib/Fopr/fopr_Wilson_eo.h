@@ -33,29 +33,8 @@
                                      [21 Mar 2015 Y.Namekawa]
  */
 
-// implementations
-
-// original unoptimised version
-#ifdef USE_ORG
-#include "Org/fopr_Wilson_eo_impl.h"
-#endif
-
-// improved version
-#ifdef USE_IMP
 #include "Imp/fopr_Wilson_eo_impl.h"
-#endif
 
-#if defined(USE_IMP)
-typedef Imp::Fopr_Wilson_eo   Fopr_Wilson_eo;
-#else
-typedef Org::Fopr_Wilson_eo   Fopr_Wilson_eo;
-#endif
+using Fopr_Wilson_eo = Imp::Fopr_Wilson_eo;
 
-#ifdef USE_FACTORY
-namespace Selector_Fopr_Wilson_eo
-{
-  bool register_factory();
-}
 #endif
-
-#endif /* FOPR_WILSON_EO_INCLUDED */

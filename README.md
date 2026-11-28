@@ -75,3 +75,9 @@ Scalar and even-odd BiCGStab also support checkpoint and resume.
 The HMC light-quark worker defaults to CG on the normal equation, with
 optional MG correction via `clover-hmc run --light-solver mg`. The strange-quark rational approximation uses
 multishift CG.
+
+## Editing in VS Code
+
+The workspace uses two-space indentation for C and C++ and four spaces for
+Python. With the C/C++ extension, Format Document uses the repository's
+ClangFormat settings.

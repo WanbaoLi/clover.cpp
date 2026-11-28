@@ -36,27 +36,8 @@
                                     [29 July 2016 T.Aoyama]
  */
 
-// implementations
-
-// original unoptimised version
-#include "Org/fopr_Wilson_impl.h"
-
-// improved version
 #include "Imp/fopr_Wilson_impl.h"
 
-#if defined(USE_IMP)
-typedef Imp::Fopr_Wilson   Fopr_Wilson;
-#else
-typedef Org::Fopr_Wilson   Fopr_Wilson;
-#endif
-
-#ifdef USE_FACTORY
-namespace Selector_Fopr_Wilson
-{
-  bool register_factory();
-}
+using Fopr_Wilson = Imp::Fopr_Wilson;
 
 #endif
-
-
-#endif /* FOPR_WILSON_INCLUDED */

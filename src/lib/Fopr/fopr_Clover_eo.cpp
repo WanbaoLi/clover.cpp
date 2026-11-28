@@ -48,19 +48,13 @@ void Fopr_Clover_eo::init(const Parameters& params)
     exit(EXIT_FAILURE);
   }
 
-#ifdef USE_IMP
   m_compact_inverse = m_repr == "Dirac" && params.is_set("compact_eo_inverse")
                     && params.get_bool("compact_eo_inverse");
-#endif
   setup();
   set_parameters(params);
 
   m_fopr_w = new Fopr_Wilson_eo(params);
-#ifdef USE_IMP
   m_fopr_csw = new Fopr_CloverTerm_eo(params, m_compact_inverse);
-#else
-  m_fopr_csw = new Fopr_CloverTerm_eo(params);
-#endif
 
   m_is_initial_step = false;
 

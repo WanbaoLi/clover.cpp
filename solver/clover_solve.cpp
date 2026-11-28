@@ -1,8 +1,6 @@
 #include "solver_cli.hpp"
 #include "field_checkpoint.hpp"
-#include "mpi_layout.hpp"
 #include "clover_sap_geometry.hpp"
-#include "gauge_layout.hpp"
 #include "configure.h"
 #include "bridge_setup.h"
 #include "bridge_init_factory.h"
@@ -10,9 +8,8 @@
 #include "lib/Field/field_F.h"
 #include "lib/Field/field_G.h"
 #include "lib/Fopr/fopr.h"
-#include "lib/IO/gaugeConfig.h"
-#include "lib/Measurements/Fermion/source_Local.h"
-#include "lib/Measurements/Fermion/source_Wall.h"
+#include "lib/IO/ildg_io.h"
+#include "lib/Measurements/Fermion/source.h"
 #include "lib/Measurements/Gauge/staple_lex.h"
 #include "lib/Smear/projection_Stout_SU3.h"
 #include "lib/Smear/smear_APE.h"
@@ -292,10 +289,11 @@ static int run(SolveOptions o,int rank,int ranks) {
       available=available && std::ifstream(clover_checkpoint::prefix(o.resume_from,rhs)+".ready").good();
     require_all(available,"a requested source has no committed checkpoint");
   }
+  std::uint64_t gauge_offset=0;
   if (o.gauge!="unit") {
     std::ifstream input(o.gauge.c_str(),std::ios::binary);
     require_all(bool(input),"cannot open ILDG gauge file on every rank");
-    if (!rank) validate_lime(o.gauge,o.lattice);
+    if (!rank) gauge_offset=ildg_payload_offset(o.gauge,o.lattice);
   }
   require_all(rank || ::mkdir(o.output.c_str(),0770)==0,"output must be a new directory with an existing writable parent");
   Parameters main;
@@ -312,7 +310,7 @@ static int run(SolveOptions o,int rank,int ranks) {
   std::string gauge_hash,coordinates;
   {
     Field_G U(volume,nd);
-    if (o.gauge=="unit") U.set_unit(); else GaugeConfig("ILDG_Parallel").read(U,o.gauge);
+    if (o.gauge=="unit") U.set_unit(); else read_ildg_gauge(U,o.gauge,gauge_offset);
     if(o.checkpoint) {
       gauge_hash=clover_checkpoint::sha256(U.ptr(0),std::size_t(U.size())*sizeof(double));
       std::vector<int> site(4);

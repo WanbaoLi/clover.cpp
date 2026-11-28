@@ -36,7 +36,7 @@ file(CONFIGURE OUTPUT "${generated}/version.h"
 
 set(qxs_inline "${generated}/lib_alt_QXS/inline")
 file(GLOB inline_headers CONFIGURE_DEPENDS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-  "src/lib_alt_QXS/${qxs_inline_source}/*.h")
+  "src/lib_alt_QXS/${qxs_inline_source}/*.h" "src/lib_alt_QXS/inline_common/*.h")
 foreach(header IN LISTS inline_headers)
   get_filename_component(name "${header}" NAME)
   if(NOT name STREQUAL "define_vlen.h")
@@ -54,22 +54,34 @@ file(CONFIGURE OUTPUT "${qxs_inline}/define_vlen.h" CONTENT "${vlen}" @ONLY)
 
 file(GLOB_RECURSE bridge_sources CONFIGURE_DEPENDS
   "src/lib/*.cpp" "src/lib_alt/*.cpp" "src/lib_alt_QXS/*.cpp")
-add_library(bridge STATIC ${bridge_sources})
-target_include_directories(bridge PUBLIC "${generated}"
-  src src/lib src/lib_alt src/lib_alt_QXS)
-target_compile_definitions(bridge PUBLIC PC_GNU USE_MPI USE_IMP USE_GROUP_SU3
+set(qxs_precision_sources
+  src/lib_alt_QXS/BridgeQXS/bridgeQXS_Clover.cpp
+  src/lib_alt_QXS/BridgeQXS/bridgeQXS_Wilson.cpp
+  src/lib_alt_QXS/Field/afield.cpp
+  src/lib_alt_QXS/Fopr/afopr_Clover.cpp
+  src/lib_alt_QXS/Solver/asolver_SAP_MINRES.cpp)
+foreach(source IN LISTS qxs_precision_sources)
+  list(REMOVE_ITEM bridge_sources "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+endforeach()
+
+add_library(bridge_config INTERFACE)
+target_include_directories(bridge_config INTERFACE "${generated}" src src/lib src/lib_alt src/lib_alt_QXS)
+target_compile_definitions(bridge_config INTERFACE PC_GNU USE_MPI USE_GROUP_SU3
   USE_OPENMP USE_STD_COMPLEX LIB_CPP11 USE_FACTORY USE_ALT_CODE USE_ALT_QXS
   OMPI_SKIP_MPICXX)
-add_library(lime STATIC
-  extra/lime/lib/lime_fseeko.c extra/lime/lib/lime_header.c extra/lime/lib/lime_reader.c
-  extra/lime/lib/lime_utils.c extra/lime/lib/lime_writer.c)
-target_include_directories(lime PUBLIC extra/lime/include)
-target_compile_definitions(lime PUBLIC _FILE_OFFSET_BITS=64)
-target_link_libraries(bridge PUBLIC MPI::MPI_CXX OpenMP::OpenMP_CXX lime m)
-target_compile_definitions(bridge PUBLIC USE_LIMELIB)
+target_link_libraries(bridge_config INTERFACE MPI::MPI_CXX OpenMP::OpenMP_CXX m)
 if(CLOVER_QXS STREQUAL "sve512")
-  target_compile_options(bridge PUBLIC ${qxs_sve_flags})
+  target_compile_options(bridge_config INTERFACE ${qxs_sve_flags})
 endif()
+
+add_library(bridge STATIC ${bridge_sources})
+target_link_libraries(bridge PUBLIC bridge_config)
+foreach(precision IN ITEMS 0 1)
+  add_library(qxs_precision_${precision} OBJECT ${qxs_precision_sources})
+  target_link_libraries(qxs_precision_${precision} PRIVATE bridge_config)
+  target_compile_definitions(qxs_precision_${precision} PRIVATE QXS_SINGLE_PRECISION=${precision})
+  target_sources(bridge PRIVATE $<TARGET_OBJECTS:qxs_precision_${precision}>)
+endforeach()
 
 add_executable(clover-solve solver/clover_solve.cpp)
 target_link_libraries(clover-solve PRIVATE bridge)

@@ -1,6 +1,6 @@
 #include "bridge_setup.h"
 #include "bridge_init_factory.h"
-#include "lib/IO/gaugeConfig.h"
+#include "lib/IO/ildg_io.h"
 #include "lib/Fopr/fopr_Clover.h"
 #include "lib/Fopr/fopr_Wilson.h"
 #include "lib/Field/field_F.h"
@@ -33,7 +33,10 @@ int main(int argc,char** argv) {
     const std::vector<int> block{2,2,4,4};
     const int length[]={xy,xy,4,gt/ranks};
     Field_G u(n,4),cut(n,4);
-    if(from_file) GaugeConfig("ILDG_Parallel").read(u,file);
+    if(from_file) {
+      const auto offset=rank ? 0 : ildg_payload_offset(file,{xy,xy,4,gt});
+      read_ildg_gauge(u,file,offset);
+    }
     else {
       // Product of two noncommuting SU(3) rotations. The global site index
       // fixes the same input independently of MPI rank numbering.

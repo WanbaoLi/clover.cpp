@@ -15,6 +15,7 @@
 #define FOPR_CLOVERTERM_IMPL_IMP_INCLUDED
 
 #include "Fopr/fopr_Wilson.h"
+#include "Field/field_F.h"
 
 #include "Measurements/Gauge/staple_lex.h"
 

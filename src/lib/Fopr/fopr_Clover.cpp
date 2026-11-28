@@ -12,6 +12,7 @@
 */
 
 #include "fopr_Clover.h"
+#include "ResourceManager/threadManager.h"
 
 #ifdef USE_FACTORY_AUTOREGISTER
 namespace {

@@ -5,7 +5,7 @@
 #include "Tools/gammaMatrixSet_Dirac.h"
 #include "Fopr/fopr_CloverTerm_eo.h"
 #include "Fopr/fopr_Wilson_eo.h"
-#include "fixed_gauge_clover_force.hpp"
+#include "local_block.hpp"
 #include "Force/Fermion/force_F_Smeared.h"
 #include "Smear/forceSmear_APE.h"
 #include "Smear/projection_Stout_SU3.h"

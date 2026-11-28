@@ -15,6 +15,7 @@
 
 #include "lib/Force/Fermion/force_F.h"
 #include "lib/Fopr/fopr_Wilson.h"
+#include "Field/field_F.h"
 #include "lib/IO/bridgeIO.h"
 using Bridge::vout;
 

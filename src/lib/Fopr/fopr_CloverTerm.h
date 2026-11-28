@@ -42,20 +42,8 @@
                                     [12 Jan 2019 I.Kanamori]
  */
 
-// implementations
-
-#ifdef USE_ORG
-#include "Org/fopr_CloverTerm_impl.h"
-#endif
-
-#ifdef USE_IMP
 #include "Imp/fopr_CloverTerm_impl.h"
-#endif
 
-#if defined(USE_IMP)
-typedef Imp::Fopr_CloverTerm   Fopr_CloverTerm;
-#else
-typedef Org::Fopr_CloverTerm   Fopr_CloverTerm;
-#endif
+using Fopr_CloverTerm = Imp::Fopr_CloverTerm;
 
 #endif

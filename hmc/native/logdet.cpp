@@ -1,7 +1,6 @@
 #include "lib/bridge_setup.h"
 #include "Fopr/fopr_Clover.h"
 #include "Fopr/fopr_Smeared.h"
-#include "fixed_gauge_clover_force.hpp"
 #include "Force/Fermion/force_F_Smeared.h"
 #include "Smear/forceSmear_APE.h"
 #include "Smear/projection_Stout_SU3.h"
