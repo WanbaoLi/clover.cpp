@@ -64,3 +64,15 @@ The original Wilson Nf=2 generator remains available as build/bridge-hmc.
 
 The default QXS build uses the generic implementation. On AArch64,
 CMake accepts -DCLOVER_QXS=sve512 with a supporting SVE2 toolchain.
+
+## MG outer solver
+
+The default is flexible BiCGStab. Select restarted flexible GCR with
+`--method mg --mg-outer gcr`. The default restart length is 16. The fine
+operator, MG setup, coarse solver and SAP smoother are shared by both modes.
+`outer_loops` counts the GCR steps, while `nconv` includes fine-operator
+applications used to refresh the GCR residual. The independently checked
+full-field residual remains the acceptance criterion.
+
+Run `tests/benchmark_mg_c24p34.sh all gcr` for the one- and twelve-column
+measurements. Omit the second argument to benchmark the default solver.

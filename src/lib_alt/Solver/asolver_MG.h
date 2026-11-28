@@ -174,6 +174,7 @@ class ASolver_MG : public ASolver<AFIELD>
   //! returns the floating point operation count [setup].
   double flop_count_setup();
 
+  int outer_iterations(int operator_count) const;
   void reset_flop_count();
 
   bool use_fopr_for_smoother() const;

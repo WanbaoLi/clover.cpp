@@ -65,6 +65,7 @@ using Smoother_t = ASolver_SAP<AField_f>;
 #define USE_SAP_FOR_SMOOTHER
 #endif
 
+#include "lib_alt/Solver/asolver_GCR.h"
 #include "lib_alt/Solver/asolver_MG-tmpl.h"
 
 template<>

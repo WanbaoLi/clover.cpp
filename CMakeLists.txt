@@ -95,7 +95,7 @@ if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
   if(Python3_Interpreter_FOUND)
     add_test(NAME numa_rank_bindings COMMAND ${Python3_EXECUTABLE}
       "${PROJECT_SOURCE_DIR}/tests/numa_rank_bindings.py")
-    foreach(test solver_layouts solver_checkpoint)
+    foreach(test solver_layouts solver_checkpoint solver_gcr)
       add_test(NAME ${test} COMMAND ${Python3_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tests/${test}.py"
         ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_PREFLAGS}
         $<TARGET_FILE:clover-solve> ${MPIEXEC_POSTFLAGS})

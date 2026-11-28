@@ -107,6 +107,7 @@ class QxsSystem {
 public:
   virtual ~QxsSystem() = default;
   virtual double solve(Field_F&, Field_F&, int&, double&, bool, int) = 0;
+  virtual int outer_iterations(int operator_count) const = 0;
   std::vector<int> block;
   double operator_error=0,setup_seconds=0;
 };
@@ -136,6 +137,13 @@ public:
   // Reserve room for roundoff between the recursive FP32 residual and the true residual.
   const double inner_tolerance=o.precision=="single" ? 0.25*o.tolerance : o.tolerance;
   mgp.set_double("convergence_criterion_squared",inner_tolerance*inner_tolerance);
+  mgp.set_string("outer_solver",o.mg_outer);
+  if (o.mg_outer=="gcr") {
+    mgp.set_int("gcr_restart",o.gcr_restart);
+    // The FP32 true residual may be limited by operator rounding after refresh.
+    const double verified_tolerance = o.precision=="single" ? 0.8*o.tolerance : o.tolerance;
+    mgp.set_double("gcr_verified_criterion_squared",verified_tolerance*verified_tolerance);
+  }
   mgp.set_string("verbose_level","General");
   level.set_int_vector("sap_block",block);level.set_int("setup_number_of_vectors",o.vectors);level.set_int("setup_number_of_step",o.setup_steps);
   level.set_int("maximum_number_of_iteration",200);level.set_int("maximum_number_of_restart",1);
@@ -150,6 +158,9 @@ public:
     }
     mg.init_solver();Timer setup("mg_setup");setup.start();mg.run_setup();setup.stop();
     setup_seconds=setup.elapsed_sec();
+  }
+  int outer_iterations(int operator_count) const override {
+    return mg.outer_iterations(operator_count);
   }
   double solve(Field_F& x,Field_F& b,int& nconv,double& diff,bool profile,int rhs) override {
     typename FineField::real_t qxs_diff=0;
@@ -260,8 +271,8 @@ static int run(SolveOptions o,int rank,int ranks) {
   }
 #endif
   if(o.method=="auto") o.method="bicgstab";
-  if((o.profile_mg || o.mg_max_iters || !o.sap_block.empty()) && o.method!="mg")
-    throw std::runtime_error("--profile-mg, --sap-block and --mg-max-iters require a multigrid solve");
+  if((o.profile_mg || o.mg_max_iters || !o.sap_block.empty() || o.mg_outer!="fbicgstab") && o.method!="mg")
+    throw std::runtime_error("MG-specific options require a multigrid solve");
   if(o.precision=="single" && o.method!="mg")
     throw std::runtime_error("--precision single requires a multigrid solve");
   if(o.checkpoint && o.method!="bicgstab" && o.method!="eo-bicgstab")
@@ -378,6 +389,8 @@ static int run(SolveOptions o,int rank,int ranks) {
         <<"\nscalar_qxs_relative_l2\t"<<operator_check<<"\nraw_plaquette\t"<<raw<<"\nstout_plaquette\t"<<stout
         <<"\nprecision\t"<<o.precision<<"\nrequested_method\t"<<requested_method<<"\nsolver\t"<<o.method<<"\nsap_block\t"<<sap_block<<"\nthreads_per_rank\t"<<o.threads<<"\nnvec\t"<<o.vectors<<"\nsetup_steps\t"<<o.setup_steps
         <<"\nsmoother_iters\t"<<o.smooth_steps<<"\nmg_max_iters\t"<<(o.mg_max_iters ? o.mg_max_iters : 5000)
+        <<"\nmg_outer\t"<<(o.method=="mg" ? o.mg_outer : "NA")
+        <<"\ngcr_restart\t"<<(o.mg_outer=="gcr" ? o.gcr_restart : 0)
         <<"\nsetup_seconds\t"<<setup_seconds<<"\nfields\t"<<o.fields
         <<"\nbasis\tBridge Dirac\nnormalization\t2*kappa\n";
     if (o.compact_eo) meta<<"compact_eo\t1\n";
@@ -500,7 +513,10 @@ static int run(SolveOptions o,int rank,int ranks) {
     }
     Communicator::reduce_sum(lt,global.data(),local.data());
     if (!rank) {
-      const int outer_loops=o.method=="eo-bicgstab" ? (nconv/2-1)/2 : nconv/2;
+      int outer_loops=o.method=="eo-bicgstab" ? (nconv/2-1)/2 : nconv/2;
+#ifdef CLOVER_HAS_QXS
+      if (qsys) outer_loops=qsys->outer_iterations(nconv);
+#endif
       columns<<rhs<<'\t'<<rhs/3<<'\t'<<rhs%3<<'\t'<<source_norm<<'\t'<<nconv<<'\t'<<outer_loops<<'\t'<<solver_error<<'\t'<<true_error<<'\t'<<seconds<<'\t'<<accept<<'\n';columns.flush();
       for (int t=0;t<lt;++t) {times<<rhs<<'\t'<<t<<'\t'<<global[t]<<'\n';summed[t]+=global[t];}
       times.flush();
