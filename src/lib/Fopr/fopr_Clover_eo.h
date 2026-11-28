@@ -68,6 +68,7 @@ class Fopr_Clover_eo : public Fopr_eo
   Field m_w1, m_w2;       //!< working field
   Field m_v1;             //!< working field
 
+  bool m_compact_inverse = false;
   bool m_is_initial_step; //!< to avoid redundant setup
 
  public:
@@ -98,6 +99,9 @@ class Fopr_Clover_eo : public Fopr_eo
 
   //- method for even odd fermion operator
   void preProp(Field& Be, Field& bo, const Field& b);
+
+  //! Extract the even Schur unknown from a full lexicographic solution field.
+  void extract_even(Field& xe, const Field& x) { m_idx.convertField(xe, x, 0); }
 
   void postProp(Field& x, const Field& xe, const Field& bo);
 
@@ -131,6 +135,7 @@ class Fopr_Clover_eo : public Fopr_eo
   void init(const Parameters& params);
 
   void setup();
+  void allocate_work_fields();
 
   void tidyup();
 

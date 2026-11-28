@@ -43,11 +43,6 @@ template<typename AFIELD>
 void ASolver_MG<AFIELD>::init()
 {
   ThreadManager::assert_single_thread(class_name);
-  constexpr int size = sizeof(typename AFIELD::real_t);
-  if (size != sizeof(double)) {
-    vout.crucial("ASolver_MG must be instanced with double prec. field\n");
-    abort();
-  }
 }
 
 
@@ -200,7 +195,7 @@ void ASolver_MG<AFIELD>::set_foprD(AFopr<AFIELD> *foprD)
   int th = ThreadManager::get_thread_id();
 #pragma omp barrier
   if (th == 0) {
-    m_afopr_fineD = dynamic_cast<FoprD_t *>(foprD);
+    m_afopr_fineD = dynamic_cast<FoprD_t<AFIELD> *>(foprD);
   }
 #pragma omp barrier
   if (m_afopr_fineD == nullptr) {
@@ -258,7 +253,7 @@ void ASolver_MG<AFIELD>::init_solver(std::string mode)
     exit(EXIT_FAILURE);
   }
   if (!m_afopr_fineD) {
-    vout.crucial(m_vl, "%s: init_solver, double prec. afopr is not yet set.\n",
+    vout.crucial(m_vl, "%s: init_solver, fine-grid afopr is not yet set.\n",
                  class_name.c_str());
     exit(EXIT_FAILURE);
   }
@@ -271,7 +266,7 @@ void ASolver_MG<AFIELD>::init_solver(std::string mode)
   init_coarse_grid();
 
   // outer solver
-  m_outer_solver.reset(new OuterSolver_t(m_afopr_fineD, m_prec_mg.get()));
+  m_outer_solver.reset(new OuterSolver_t<AFIELD>(m_afopr_fineD, m_prec_mg.get()));
   m_outer_solver->set_parameters(m_params_asolver_outer);
 }
 
@@ -300,7 +295,7 @@ void ASolver_MG<AFIELD>::init_coarse_grid()
   // afopr: downcasted objects
   //   downcast safty is guaranteed in the setter
   FoprF_t *afopr_fineF = static_cast<FoprF_t *>(m_afopr_fineF);
-  FoprD_t *afopr_fineD = static_cast<FoprD_t *>(m_afopr_fineD);
+  FoprD_t<AFIELD> *afopr_fineD = static_cast<FoprD_t<AFIELD> *>(m_afopr_fineD);
 
   // initialize coase grid operator
   FoprCoarse_t *afopr_coarse = new FoprCoarse_t();

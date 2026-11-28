@@ -47,7 +47,7 @@ typedef AField<double, QXS>   AField_d;
 using MultiGrid_t = MultiGrid_Clover<AField_f, AField_f>;
 
 // operators
-using FoprD_t      = AFopr_Clover<AField_d>;
+template<class Field> using FoprD_t = AFopr_Clover<Field>;
 using FoprF_t      = AFopr_Clover_dd<AField_f>;
 using FoprCoarse_t = AFopr_Clover_coarse<AField_f>;
 #ifdef USE_SAP_QWS
@@ -56,7 +56,7 @@ using FoprSmoother_t = AFopr_Clover_QWS_dd<AField_f>;
 #endif
 
 // solver types
-using OuterSolver_t  = ASolver_FBiCGStab<AField_d>;
+template<class Field> using OuterSolver_t = ASolver_FBiCGStab<Field>;
 using CoarseSolver_t = ASolver_BiCGStab_Cmplx<AField_f>;
 #ifdef USE_SAP_QWS
 using Smoother_t = ASolver_SAP_QWS<AField_f>;
@@ -71,3 +71,7 @@ template<>
 const std::string ASolver_MG<AField_d>::class_name = "ASolver_MG";
 
 template class ASolver_MG<AField_d>;
+
+template<>
+const std::string ASolver_MG<AField_f>::class_name = "ASolver_MG";
+template class ASolver_MG<AField_f>;

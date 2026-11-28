@@ -26,6 +26,7 @@ using Bridge::vout;
 class Staple_eo;
 class ShiftField_eo;
 class Solver_CG;
+class Fopr_Clover_eo;
 
 //! Clover term operator.
 
@@ -87,18 +88,24 @@ namespace Imp {
     std::vector<GammaMatrix> m_GM, m_SG;
 
     Index_eo m_idx;
-    Staple_eo *m_staple;
-    ShiftField_eo *m_shift_eo;
-    Solver_CG *m_solver;
+    // Only the enclosing Schur operator can request inverse-only storage.
+    friend class ::Fopr_Clover_eo;
+    bool m_inverse_only = false;
+    Fopr_CloverTerm_eo(const Parameters& params, bool inverse_only)
+      : m_inverse_only(inverse_only) { init(params); }
 
-    Field_G m_Ueo;                //!< even-odd gauge configuration
-    Field_G m_T;                  //!< m_T = 1 - kappa c_SW sigma F / 2
+    Staple_eo *m_staple = nullptr;
+    ShiftField_eo *m_shift_eo = nullptr;
+    Solver_CG *m_solver = nullptr;
 
-    Field_F m_Fee_inv, m_Foo_inv; //!<inverse of site-diagonal part
-    Field_F m_w1, m_w2;           //!< working vectors
-    Field_G m_Ft;                 //!< working vectors
-    Field_G m_Cup, m_Cdn, m_Umu;  //!< working vectors
-    Field_G m_ut1, m_ut2, m_ut3;  //!< working vectors
+    Field_G m_Ueo{0, 0};                //!< even-odd gauge configuration
+    Field_G m_T{0, 0};                  //!< m_T = 1 - kappa c_SW sigma F / 2
+
+    Field_F m_Fee_inv{0, 0}, m_Foo_inv{0, 0}; //!<inverse of site-diagonal part
+    Field_F m_w1{0, 0}, m_w2{0, 0};           //!< working vectors
+    Field_G m_Ft{0, 0};                 //!< working vectors
+    Field_G m_Cup{0, 0}, m_Cdn{0, 0}, m_Umu{0, 0};  //!< working vectors
+    Field_G m_ut1{0, 0}, m_ut2{0, 0}, m_ut3{0, 0};  //!< working vectors
     // try to reduce number of working vector in set_fieldstrength !
 
    public:
@@ -166,6 +173,9 @@ namespace Imp {
     void tidyup();
 
     void setup();
+    void allocate_fieldstrength_workspace();
+    void release_fieldstrength_workspace();
+    void allocate_inverse_workspace();
 
     void setup_gamma_matrices();
 

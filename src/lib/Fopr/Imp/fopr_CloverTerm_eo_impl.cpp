@@ -106,25 +106,10 @@ namespace Imp {
 
     m_boundary.resize(m_Ndim);
 
-    m_Ueo.reset(m_Nvol, m_Ndim);
-
     m_Ndm2 = m_Nd * m_Nd / 2;
-    m_T.reset(m_Nvol, m_Ndm2);
-
     m_GM.resize(m_Ndim + 1);
     m_SG.resize(m_Ndim * m_Ndim);
-
-    m_Fee_inv.reset(m_Nvol2, m_Nc * m_Nd);
-    m_Foo_inv.reset(m_Nvol2, m_Nc * m_Nd);
-
-    int Ndf = 2 * m_Nc * m_Nc;
-    m_shift_eo = new ShiftField_eo(Ndf);
-
-    m_staple = new Staple_eo;
-
-    m_w1.reset(m_Nvol2, 1);
-    m_w2.reset(m_Nvol2, 1);
-
+    // CG configuration is serial and is valid for every subsequent gauge.
     // setup solver
     Parameters params_solver;
     params_solver.set_string("solver_type", "CG");
@@ -137,6 +122,60 @@ namespace Imp {
 
     m_solver = new Solver_CG(this);
     m_solver->set_parameters(params_solver);
+    if (!m_inverse_only) {
+      allocate_fieldstrength_workspace();
+      allocate_inverse_workspace();
+    }
+  }
+
+
+//====================================================================
+  void Fopr_CloverTerm_eo::allocate_fieldstrength_workspace()
+  {
+    m_Ueo.reset(m_Nvol, m_Ndim);
+    m_T.reset(m_Nvol, m_Ndm2);
+    m_Ft.reset(m_Nvol, 1);
+    m_Cup.reset(m_Nvol, 1);
+    m_Cdn.reset(m_Nvol, 1);
+    m_Umu.reset(m_Nvol, 1);
+    m_ut1.reset(m_Nvol, 1);
+    m_ut2.reset(m_Nvol, 1);
+    m_ut3.reset(m_Nvol, 1);
+    m_shift_eo = new ShiftField_eo(2 * m_Nc * m_Nc);
+    m_staple = new Staple_eo;
+  }
+
+
+//====================================================================
+  void Fopr_CloverTerm_eo::release_fieldstrength_workspace()
+  {
+    m_Ueo.reset(0, 0);
+    m_Ft.reset(0, 0);
+    m_Cup.reset(0, 0);
+    m_Cdn.reset(0, 0);
+    m_Umu.reset(0, 0);
+    m_ut1.reset(0, 0);
+    m_ut2.reset(0, 0);
+    m_ut3.reset(0, 0);
+    delete m_shift_eo;
+    m_shift_eo = nullptr;
+    delete m_staple;
+    m_staple = nullptr;
+  }
+
+
+//====================================================================
+  void Fopr_CloverTerm_eo::allocate_inverse_workspace()
+  {
+    // mult_csw_inv_dirac uses the first two source spins for both output
+    // halves, permuting the input spin on the second half.
+    const int columns = m_Nc * (m_inverse_only ? m_Nd / 2 : m_Nd);
+    m_Fee_inv.reset(m_Nvol2, columns);
+    m_Foo_inv.reset(m_Nvol2, columns);
+    m_w1.reset(m_Nvol2, 1);
+    m_w2.reset(m_Nvol2, 1);
+
+
   }
 
 
@@ -282,10 +321,36 @@ namespace Imp {
 //====================================================================
   void Fopr_CloverTerm_eo::set_config_impl(Field *U)
   {
+    if (m_inverse_only) {
+#pragma omp master
+      {
+        // A new gauge replaces both previously committed parity inverses.
+        m_Fee_inv.reset(0, 0);
+        m_Foo_inv.reset(0, 0);
+        allocate_fieldstrength_workspace();
+      }
+#pragma omp barrier
+    }
     m_idx.convertField(m_Ueo, *U);
-
     set_csw();
+    if (m_inverse_only) {
+#pragma omp master
+      {
+        release_fieldstrength_workspace();
+        allocate_inverse_workspace();
+      }
+#pragma omp barrier
+    }
     solve_csw_inv();
+    if (m_inverse_only) {
+#pragma omp master
+      {
+        m_T.reset(0, 0);
+        m_w1.reset(0, 0);
+        m_w2.reset(0, 0);
+      }
+#pragma omp barrier
+    }
   }
 
 
@@ -330,7 +395,8 @@ namespace Imp {
   {
     const double eps2 = CommonParameters::epsilon_criterion2();
 
-    for (int ispin = 0; ispin < m_Nd; ++ispin) {
+    const int inverse_spins = m_Fee_inv.nex() / m_Nc;
+    for (int ispin = 0; ispin < inverse_spins; ++ispin) {
       for (int icolor = 0; icolor < m_Nc; ++icolor) {
         int spin_color = icolor + m_Nc * ispin;
 
@@ -369,7 +435,7 @@ namespace Imp {
     set_threadtask(ith, nth, is, ns, m_Nvol2);
 
     // redefine the inverse matrix with its dagger.
-    for (int ics = 0; ics < m_Nc * m_Nd; ++ics) {
+    for (int ics = 0; ics < m_Fee_inv.nex(); ++ics) {
       for (int site = is; site < ns; ++site) {
         for (int id = 0; id < m_Nd; ++id) {
           for (int ic = 0; ic < m_Nc; ++ic) {

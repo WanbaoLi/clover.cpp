@@ -189,6 +189,16 @@ void Solver_BiCGStab_Cmplx::set_parameters(const int Niter,
 void Solver_BiCGStab_Cmplx::solve(Field& xq, const Field& b,
                                   int& Nconv, double& diff)
 {
+  if (!try_solve(xq, b, Nconv, diff)) {
+#pragma omp master
+    { exit(EXIT_FAILURE); }
+#pragma omp barrier
+  }
+}
+
+bool Solver_BiCGStab_Cmplx::try_solve(Field& xq, const Field& b,
+                                      int& Nconv, double& diff)
+{
   const double bnorm2 = b.norm2();
   const int    bsize  = b.size();
 
@@ -206,14 +216,19 @@ void Solver_BiCGStab_Cmplx::solve(Field& xq, const Field& b,
   //   Nconv_unit = 2;
   // }
 
-  reset_field(b);
-
-  if (m_use_init_guess) {
-    copy(m_s, xq);  // s = xq;
-  } else {
-    copy(m_s, b);   // s = b;
+  // The source remains live until the final true residual, including for solve(b, b).
+  const bool use_output = &xq != &b
+                       && b.field_element_type() == Element_type::COMPLEX
+                       && xq.field_element_type() == Element_type::COMPLEX
+                       && xq.check_size(b.nin(), b.nvol(), b.nex());
+  reset_field(b, !use_output);
+  Field& x = use_output ? xq : m_private_x;
+  if (!m_use_init_guess) {
+    copy(x, b);
+  } else if (!use_output) {
+    copy(x, xq);
   }
-  solve_init(b, rr);
+  solve_init(x, b, rr);
   Nconv2 += Nconv_unit;
 
   vout.detailed(m_vl, "    iter: %8d  %22.15e\n", Nconv2, rr / bnorm2);
@@ -223,16 +238,16 @@ void Solver_BiCGStab_Cmplx::solve(Field& xq, const Field& b,
     for (int iter = 0; iter < m_Niter; iter++) {
       if (rr / bnorm2 < m_Stop_cond) break;
 
-      solve_step(rr);
+      solve_step(x, rr);
       Nconv2 += 2 * Nconv_unit;
 
       vout.detailed(m_vl, "    iter: %8d  %22.15e\n", Nconv2, rr / bnorm2);
     }
 
     //- calculate true residual
-    m_fopr->mult(m_s, m_x);  // s  = m_fopr->mult(x);
-    axpy(m_s, -1.0, b);      // s -= b;
-    diff2 = m_s.norm2();
+    m_fopr->mult(m_t, x);
+    axpy(m_t, -1.0, b);
+    diff2 = m_t.norm2();
 
     if (diff2 / bnorm2 < m_Stop_cond) {
       vout.detailed(m_vl, "%s: converged.\n", class_name.c_str());
@@ -246,8 +261,7 @@ void Solver_BiCGStab_Cmplx::solve(Field& xq, const Field& b,
       break;
     } else {
       //- restart with new approximate solution
-      copy(m_s, m_x);  // s = x;
-      solve_init(b, rr);
+      solve_init(x, b, rr);
 
       vout.detailed(m_vl, "%s: restarted.\n", class_name.c_str());
     }
@@ -257,11 +271,10 @@ void Solver_BiCGStab_Cmplx::solve(Field& xq, const Field& b,
   if (!is_converged) {
     vout.crucial(m_vl, "Error at %s: not converged.\n", class_name.c_str());
     vout.crucial(m_vl, "  iter(final): %8d  %22.15e\n", Nconv2, diff2 / bnorm2);
-    exit(EXIT_FAILURE);
   }
 
 
-  copy(xq, m_x);  // xq = x;
+  if (!use_output) copy(xq, x);
 
 #pragma omp barrier
 #pragma omp master
@@ -270,11 +283,12 @@ void Solver_BiCGStab_Cmplx::solve(Field& xq, const Field& b,
     Nconv = Nconv2;
   }
 #pragma omp barrier
+  return is_converged;
 }
 
 
 //====================================================================
-void Solver_BiCGStab_Cmplx::reset_field(const Field& b)
+void Solver_BiCGStab_Cmplx::reset_field(const Field& b, bool need_private_x)
 {
 #pragma omp barrier
 #pragma omp master
@@ -283,10 +297,14 @@ void Solver_BiCGStab_Cmplx::reset_field(const Field& b)
     const int Nvol = b.nvol();
     const int Nex  = b.nex();
 
-    if ((m_s.nin() != Nin) || (m_s.nvol() != Nvol) || (m_s.nex() != Nex)) {
-      m_s.reset(Nin, Nvol, Nex);
+    if (need_private_x) {
+      m_private_x.reset(Nin, Nvol, Nex);
+    } else {
+      m_private_x.reset(0, 0, 0);
+    }
+
+    if (!m_r.check_size(Nin, Nvol, Nex)) {
       m_r.reset(Nin, Nvol, Nex);
-      m_x.reset(Nin, Nvol, Nex);
       m_p.reset(Nin, Nvol, Nex);
       m_v.reset(Nin, Nvol, Nex);
       m_t.reset(Nin, Nvol, Nex);
@@ -300,12 +318,11 @@ void Solver_BiCGStab_Cmplx::reset_field(const Field& b)
 
 
 //====================================================================
-void Solver_BiCGStab_Cmplx::solve_init(const Field& b, double& rr)
+void Solver_BiCGStab_Cmplx::solve_init(const Field& x, const Field& b, double& rr)
 {
-  copy(m_x, m_s);  // x = s;
-
   // r = b - A x_0
-  m_fopr->mult(m_v, m_s); // v = m_fopr->mult(s);
+#pragma omp barrier
+  m_fopr->mult(m_v, x);
   copy(m_r, b);           // r  = b;
   axpy(m_r, -1.0, m_v);   // r -= v;
   copy(m_rh, m_r);        // rh = r;
@@ -327,7 +344,7 @@ void Solver_BiCGStab_Cmplx::solve_init(const Field& b, double& rr)
 
 
 //====================================================================
-void Solver_BiCGStab_Cmplx::solve_step(double& rr)
+void Solver_BiCGStab_Cmplx::solve_step(Field& x, double& rr)
 {
   const dcomplex rho  = dotc(m_rh, m_r);  // rho = rh * r;
   const dcomplex beta = rho * m_alpha_prev / (m_rho_prev * m_omega_prev);
@@ -341,17 +358,17 @@ void Solver_BiCGStab_Cmplx::solve_step(double& rr)
   const dcomplex aden  = dotc(m_rh, m_v); // aden = rh * v;
   const dcomplex alpha = rho / aden;
 
-  copy(m_s, m_r);                              // s  = r
-  axpy(m_s, -alpha, m_v);                      // s += - alpha * v;
+  // r is no longer needed after this point. Hold s = r - alpha v in its storage.
+  axpy(m_r, -alpha, m_v);
+#pragma omp barrier
+  m_fopr->mult(m_t, m_r);
 
-  m_fopr->mult(m_t, m_s);                      // t  = m_fopr->mult(s);
-
-  const dcomplex omega_numer = dotc(m_t, m_s); // omega_numer = t * s;
+  const dcomplex omega_numer = dotc(m_t, m_r); // omega_numer = t * s;
   const double   omega_denom = dot(m_t, m_t);  // omega_denom = t * t;
 
   dcomplex omega = omega_numer / omega_denom;
 
-  const double s_norm2 = m_s.norm2();
+  const double s_norm2 = m_r.norm2();
 
   //- a prescription to improve stability of BiCGStab
   const double abs_rho = abs(omega_numer) / sqrt(omega_denom * s_norm2);
@@ -359,11 +376,10 @@ void Solver_BiCGStab_Cmplx::solve_step(double& rr)
     omega *= m_Omega_tolerance / abs_rho;
   }
 
-  axpy(m_x, omega, m_s);   // x += omega * s;
-  axpy(m_x, alpha, m_p);   // x += alpha * p;
+  axpy(x, omega, m_r);     // x += omega * s;
+  axpy(x, alpha, m_p);     // x += alpha * p;
 
-  copy(m_r, m_s);          // r  = s
-  axpy(m_r, -omega, m_t);  // r += - omega * t;
+  axpy(m_r, -omega, m_t);  // r = s - omega * t;
 
   rr = m_r.norm2();        // rr = r * r;
 
@@ -385,9 +401,9 @@ double Solver_BiCGStab_Cmplx::flop_count()
 
   //- NB1 Nin = 2 * Nc * Nd, Nex = 1  for field_F
   //- NB2 Nvol = CommonParameters::Nvol()/2 for eo
-  const int Nin  = m_x.nin();
-  const int Nvol = m_x.nvol();
-  const int Nex  = m_x.nex();
+  const int Nin  = m_r.nin();
+  const int Nvol = m_r.nvol();
+  const int Nex  = m_r.nex();
 
   const double gflop_fopr = m_fopr->flop_count();
 

@@ -32,5 +32,10 @@ const std::string APrecond_MG<AField<double, QXS>, AField<float, QXS> >::class_n
   = "APrecond_MG<AField<double,QXS>, AField<float,QXS> >";
 template class APrecond_MG<AField<double, QXS>, AField<float, QXS> >;
 
+template<>
+const std::string APrecond_MG<AField<float, QXS>, AField<float, QXS> >::class_name
+  = "APrecond_MG<AField<float,QXS>, AField<float,QXS> >";
+template class APrecond_MG<AField<float, QXS>, AField<float, QXS> >;
+
 
 //============================================================END=====

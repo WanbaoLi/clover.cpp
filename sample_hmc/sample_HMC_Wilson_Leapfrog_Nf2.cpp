@@ -11,7 +11,20 @@
         @version $LastChangedRevision: 2516 $
 */
 
-#include "bridge.h"
+#include "bridge_setup.h"
+#include "lib/Action/Fermion/action_F_Standard_lex.h"
+#include "lib/Force/Fermion/force_F_Smeared.h"
+#include "lib/Force/Fermion/force_F_Wilson_Nf2.h"
+#include "lib/HMC/hmc_Leapfrog.h"
+#include "lib/IO/gaugeConfig.h"
+#include "lib/Measurements/Fermion/fprop_Standard_lex.h"
+#include "lib/Parameters/parameterManager.h"
+#include "lib/Smear/director_Smear.h"
+#include "lib/Smear/forceSmear.h"
+#include "lib/Tools/randomNumberManager.h"
+#include "lib/Tools/randomNumbers_Mseries.h"
+#include "lib/Tools/file_utils.h"
+#include "lib/Tools/timer.h"
 using Bridge::vout;
 
 

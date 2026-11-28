@@ -36,8 +36,6 @@ void Fopr_Clover_eo::init(const Parameters& params)
   vout.general(m_vl, "%s: construction\n", class_name.c_str());
   vout.increase_indent();
 
-  setup();
-
   std::string repr;
   if (!params.fetch_string("gamma_matrix_type", repr)) {
     m_repr = repr;
@@ -50,10 +48,19 @@ void Fopr_Clover_eo::init(const Parameters& params)
     exit(EXIT_FAILURE);
   }
 
+#ifdef USE_IMP
+  m_compact_inverse = m_repr == "Dirac" && params.is_set("compact_eo_inverse")
+                    && params.get_bool("compact_eo_inverse");
+#endif
+  setup();
   set_parameters(params);
 
-  m_fopr_w   = new Fopr_Wilson_eo(params);
+  m_fopr_w = new Fopr_Wilson_eo(params);
+#ifdef USE_IMP
+  m_fopr_csw = new Fopr_CloverTerm_eo(params, m_compact_inverse);
+#else
   m_fopr_csw = new Fopr_CloverTerm_eo(params);
+#endif
 
   m_is_initial_step = false;
 
@@ -101,7 +108,13 @@ void Fopr_Clover_eo::setup()
   m_Nvol2 = m_Nvol / 2;
 
   m_boundary.resize(m_Ndim);
+  if (!m_compact_inverse) allocate_work_fields();
+}
 
+
+//====================================================================
+void Fopr_Clover_eo::allocate_work_fields()
+{
   m_w1.reset(m_NinF, m_Nvol2, 1);
   m_w2.reset(m_NinF, m_Nvol2, 1);
 
@@ -196,11 +209,23 @@ void Fopr_Clover_eo::set_config(Field *U)
 #pragma omp barrier
 
   int ith = ThreadManager::get_thread_id();
-  if (ith == 0) m_U = (Field_G *)U;
+  if (ith == 0) {
+    m_U = (Field_G *)U;
+    if (m_compact_inverse) {
+      m_w1.reset(0, 0, 0);
+      m_w2.reset(0, 0, 0);
+      m_v1.reset(0, 0, 0);
+    }
+  }
 #pragma omp barrier
 
   m_fopr_w->set_config(U);
   m_fopr_csw->set_config(U);
+  if (m_compact_inverse) {
+#pragma omp master
+    { allocate_work_fields(); }
+#pragma omp barrier
+  }
 }
 
 

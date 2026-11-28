@@ -57,7 +57,7 @@ class Solver_BiCGStab_Cmplx : public Solver
 
   //- working area
   dcomplex m_rho_prev, m_alpha_prev, m_omega_prev;
-  Field m_s, m_r, m_x, m_rh, m_p, m_v, m_t;
+  Field m_r, m_rh, m_p, m_v, m_t, m_private_x;
 
   int m_Nrestart_count;
   int m_Nconv_count;
@@ -104,15 +104,18 @@ class Solver_BiCGStab_Cmplx : public Solver
 
   void solve(Field& solution, const Field& source, int& Nconv, double& diff);
 
+  // Return the last iterate and its measured residual even if the iteration budget expires.
+  bool try_solve(Field& solution, const Field& source, int& Nconv, double& diff);
+
   Fopr *get_fopr() { return m_fopr; }
 
   double flop_count();
 
  private:
-  void reset_field(const Field&);
+  void reset_field(const Field&, bool);
 
-  void solve_init(const Field&, double&);
-  void solve_step(double&);
+  void solve_init(const Field&, const Field&, double&);
+  void solve_step(Field&, double&);
 
 #ifdef USE_FACTORY
  private:

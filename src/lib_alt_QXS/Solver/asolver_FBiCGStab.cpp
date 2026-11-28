@@ -17,5 +17,6 @@
 
 // explicit instanciation.
 template class ASolver_FBiCGStab<AField<double, QXS> >;
+template class ASolver_FBiCGStab<AField<float, QXS> >;
 
 //============================================================END=====
