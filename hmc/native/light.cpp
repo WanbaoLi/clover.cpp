@@ -41,15 +41,15 @@ void evaluate(double h,double num,double den,bool ratio) {
       copy(r,rhs);z.set(0.);const double initial=r.norm2();
       if(hmc_light::use_multigrid() && initial>0.) {
         const int calls=hmc_light::correct_normal(z,r,denominator,*dr.get_config(),den,target);
-        denominator.apply(y,z,false);denominator.apply(q,y,true);copy(r,rhs);axpy(r,-1.,q);
+        denominator.apply_normal(q,y,z);copy(r,rhs);axpy(r,-1.,q);
         hmc_mpi::report("MG_NORMAL refresh %d %.17g\n",calls,r.norm()/std::sqrt(initial));
       }
       copy(p,r);double rr=r.norm2();
       while(rr>initial*target*target && iterations<max_iterations) {
-        denominator.apply(y,p,false);denominator.apply(q,y,true);double alpha=rr/y.norm2();
+        denominator.apply_normal(q,y,p);double alpha=rr/y.norm2();
         axpy(z,alpha,p);axpy(r,-alpha,q);double next=r.norm2();aypx(next/rr,p,r);rr=next;++iterations;
       }
-      denominator.apply(out,z,false);denominator.apply(q,out,true);axpy(q,-1.,rhs);residual=q.norm()/std::sqrt(initial);
+      denominator.apply_normal(q,out,z);axpy(q,-1.,rhs);residual=q.norm()/std::sqrt(initial);
     }
     write_spinor("refreshed.bin",out);
     hmc_mpi::report("REFRESH %.17g %d\n",residual,iterations);return;
@@ -71,18 +71,18 @@ void evaluate(double h,double num,double den,bool ratio) {
   double rr=r.norm2();const double starting_residual=std::sqrt(rr/initial);int it=0;
   if(hmc_light::use_multigrid() && rr>initial*target*target) {
     const int calls=hmc_light::correct_normal(x,r,M,*dr.get_config(),num,target);
-    M.apply(y,x,false);M.apply(q,y,true);copy(r,rhs);axpy(r,-1.,q);
+    M.apply_normal(q,y,x);copy(r,rhs);axpy(r,-1.,q);
     rr=r.norm2();copy(p,r);
     hmc_mpi::report("MG_NORMAL action %d %.17g\n",calls,std::sqrt(rr/initial));
   }
   while(rr>initial*target*target && it<max_iterations) {
-    M.apply(y,p,false); M.apply(q,y,true);
+    M.apply_normal(q,y,p);
     const double alpha=rr/y.norm2();
     axpy(x,alpha,p); axpy(r,-alpha,q);
     const double next=r.norm2();
     aypx(next/rr,p,r); rr=next; ++it;
   }
-  M.apply(y,x,false); M.apply(q,y,true); axpy(q,-1.,rhs);
+  M.apply_normal(q,y,x); axpy(q,-1.,rhs);
   const double residual=q.norm()/rhs.norm();
   if(residual>1.5*target) {
     std::fprintf(stderr,"Schur true residual %.17g after %d iterations, target %.17g\n",residual,it,target);

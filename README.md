@@ -67,8 +67,8 @@ CMake accepts -DCLOVER_QXS=sve512 with a supporting SVE2 toolchain.
 
 ## MG outer solver
 
-The default is flexible BiCGStab. Select restarted flexible GCR with
-`--method mg --mg-outer gcr`. The default restart length is 16. The fine
+The default MG outer solver is restarted flexible GCR with restart length 16.
+Use `--method mg --mg-outer fbicgstab` to select flexible BiCGStab. The fine
 operator, MG setup, coarse solver and SAP smoother are shared by both modes.
 `outer_loops` counts the GCR steps, while `nconv` includes fine-operator
 applications used to refresh the GCR residual. The independently checked

@@ -13,7 +13,7 @@ case ${1:-all} in
   all) precisions=(single double) ;;
   *) echo "Usage: $0 [single|double|all] [fbicgstab|gcr]" >&2; exit 2 ;;
 esac
-outer=${2:-fbicgstab}
+outer=${2:-gcr}
 case "$outer" in
   fbicgstab|gcr) ;;
   *) echo "Unknown MG outer solver: $outer" >&2; exit 2 ;;

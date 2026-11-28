@@ -26,7 +26,8 @@ struct OddSchur {
   std::unique_ptr<Force_F_Smeared> chain;
   Index_eo idx;
   OddSchur(double mass,Field_G& thin,Director_Smear& dr,ForceSmear_APE* ds) :
-    hop("Dirac"),block("Dirac"),gamma5(GammaMatrixSet_Dirac().get_GM(GammaMatrixSet::GAMMA5)) {
+    hop("Dirac"),block("Dirac"),gamma5(GammaMatrixSet_Dirac().get_GM(GammaMatrixSet::GAMMA5)),
+    scratch_a(half_volume,1),scratch_b(half_volume,1) {
     const std::vector<int> bc={1,1,1,-1};
     const double k=.5/(4.+mass);
     hop.set_parameters(k,bc); block.set_parameters(k,coeff,bc);
@@ -42,19 +43,17 @@ struct OddSchur {
     }
   }
   void apply(Field_F& out,const Field_F& in,bool dagger) {
-    Field_F a(half_volume,1),b(half_volume,1);
-    // Bridge++ implements the Wilson hops and local Clover products
-    // cooperatively within one OpenMP team. Scratch fields are shared.
+#pragma omp parallel if(ThreadManager::get_num_threads_available() > 1)
+    { apply_team(out,in,dagger); }
+  }
+  // Keep both Schur applications in one OpenMP team and retain the image
+  // for callers that also need ||M*in|| or the RHMC force.
+  void apply_normal(Field_F& out,Field_F& image,const Field_F& in) {
 #pragma omp parallel if(ThreadManager::get_num_threads_available() > 1)
     {
-      if(!dagger) {
-        hop.Meo(a,in,0); block.mult_csw_inv(b,a,0);
-        hop.Meo(a,b,1); block.mult_csw_inv(out,a,1);
-      } else {
-        block.mult_csw_inv(a,in,1); hop.Mdageo(b,a,0);
-        block.mult_csw_inv(a,b,0); hop.Mdageo(out,a,1);
-      }
-      aypx(-1.,out,in);
+      apply_team(image,in,false);
+#pragma omp barrier
+      apply_team(out,image,true);
     }
   }
   // Accumulate +2 Re[left^dag (delta D) right] on the original thin field.
@@ -86,4 +85,19 @@ struct OddSchur {
     bilinear(out,le,0,u,0,w);
     bilinear(out,le,0,right,1,-w);
   }
+
+ private:
+  void apply_team(Field_F& out,const Field_F& in,bool dagger) {
+    auto& a=scratch_a;
+    auto& b=scratch_b;
+    if(!dagger) {
+      hop.Meo(a,in,0); block.mult_csw_inv(b,a,0);
+      hop.Meo(a,b,1); block.mult_csw_inv(out,a,1);
+    } else {
+      block.mult_csw_inv(a,in,1); hop.Mdageo(b,a,0);
+      block.mult_csw_inv(a,b,0); hop.Mdageo(out,a,1);
+    }
+    aypx(-1.,out,in);
+  }
+  Field_F scratch_a,scratch_b;
 };

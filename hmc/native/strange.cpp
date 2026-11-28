@@ -22,9 +22,22 @@ struct ShiftState {
 using States=std::vector<std::unique_ptr<ShiftState>>;
 
 void normal(OddSchur& M,Field_F& result,Field_F& tmp,const Field_F& x,double shift) {
-  M.apply(tmp,x,false);
-  M.apply(result,tmp,true);
+  M.apply_normal(result,tmp,x);
   axpy(result,shift,x);
+}
+
+// Both norms enter the same CG curvature. Reduce the two real scalars
+// together while preserving the local site order of Field::norm2().
+double shifted_curvature(const Field_F& image,const Field_F& direction,double shift) {
+  const double* y=image.ptr(0);
+  const double* p=direction.ptr(0);
+  double local[2]={0.,0.},global[2];
+  for (int k=0;k<image.size();++k) {
+    local[0]+=y[k]*y[k];
+    local[1]+=p[k]*p[k];
+  }
+  Communicator::reduce_sum(2,global,local);
+  return global[0]+shift*global[1];
 }
 
 int independent_cg(OddSchur& M,ShiftState& state,const Field_F& initial_residual,
@@ -36,7 +49,7 @@ int independent_cg(OddSchur& M,ShiftState& state,const Field_F& initial_residual
   int steps=0;
   while (rr>target_sq && steps<limit) {
     normal(M,product,tmp,state.direction,shift);
-    const double denominator=tmp.norm2()+shift*state.direction.norm2();
+    const double denominator=shifted_curvature(tmp,state.direction,shift);
     if (!(denominator>0.0) || !std::isfinite(denominator)) throw std::runtime_error("invalid shifted-CG curvature");
     const double step=rr/denominator;
     axpy(state.x,step,state.direction);
@@ -61,7 +74,7 @@ int shared_cg(OddSchur& M,States& states,const std::vector<double>& poles,
   double rr=r.norm2(),previous_step=1.0,previous_beta=0.0;
   while (rr>target_sq && base.updates<limit) {
     normal(M,product,tmp,base.direction,poles.front());
-    const double curvature=tmp.norm2()+poles.front()*base.direction.norm2();
+    const double curvature=shifted_curvature(tmp,base.direction,poles.front());
     if (!(curvature>0.0) || !std::isfinite(curvature)) throw std::runtime_error("invalid multi-shift CG curvature");
     const double step=rr/curvature;
     axpy(base.x,step,base.direction);
@@ -128,6 +141,7 @@ void evaluate(double h,double tol) {
     int steps=0,polish=0,checks=0;
     for (size_t i=0;i<rt.pole.size();++i) states.emplace_back(new ShiftState(rhs));
     if (shared) steps=shared_cg(M,states,rt.pole,rhs,target_sq,max_iterations);
+    Field_F y(half_volume,1),q(half_volume,1);
     for(size_t i=0;i<rt.pole.size();++i) {
       ShiftState& s=*states[i];
       const double pole=rt.pole[i];
@@ -135,7 +149,6 @@ void evaluate(double h,double tol) {
         s.updates=independent_cg(M,s,rhs,pole,target_sq,max_iterations);
         steps+=s.updates;
       }
-      Field_F y(half_volume,1),q(half_volume,1);
       normal(M,q,y,s.x,pole);
       ++checks;
       axpy(q,-1.,rhs);

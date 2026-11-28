@@ -126,11 +126,9 @@ class ASolver_GCR : public ASolver<Field>
   double refresh(const Field& x, const Field& b, int& applications, double& vector_cost)
   {
     m_op->mult(m_residual, x);
-    m_residual.scal(Real(-1));
-    axpy(m_residual, Real(1), b);
     ++applications;
-    vector_cost += 10.0;
-    return norm2(m_residual);
+    vector_cost += 6.0;
+    return m_residual.residual_norm2(b);
   }
 
   AFopr<Field>* m_op;

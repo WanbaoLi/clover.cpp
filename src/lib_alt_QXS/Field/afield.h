@@ -210,6 +210,7 @@ class AField<REALTYPE, QXS>
   void dotc(real_t&, real_t&, const AField<real_t, QXS>&) const;
 
   real_t norm2(void) const;
+  real_t residual_norm2(const AField& rhs);
 
   void bicg_update_p(complex_t minus_omega, complex_t beta,
                      const AField& v, const AField& r);

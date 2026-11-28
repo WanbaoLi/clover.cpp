@@ -10,7 +10,7 @@ with tempfile.TemporaryDirectory(prefix="clover-gcr-") as workspace:
     for precision, tolerance in (("single", "1e-6"), ("double", "1e-9")):
         out = Path(workspace) / precision
         subprocess.run(
-            [launcher, count_flag, "1", *solver, "--method", "mg", "--mg-outer", "gcr",
+            [launcher, count_flag, "1", *solver, "--method", "mg",
              "--gcr-restart", "1", "--mg-max-iters", "100", "--lattice", "8,8,4,4",
              "--grid", "1,1,1,1", "--gauge", "unit", "--mass", "1", "--rhs", "0,1",
              "--threads", "1", "--precision", precision, "--nvec", "4", "--setup-steps", "1",
@@ -18,6 +18,7 @@ with tempfile.TemporaryDirectory(prefix="clover-gcr-") as workspace:
             check=True, timeout=60,
         )
         assert (out / "COMPLETE").is_file()
+        assert "mg_outer\tgcr" in (out / "run.tsv").read_text().splitlines()
         with (out / "columns.tsv").open() as table:
             rows = list(csv.DictReader(table, delimiter="\t"))
         assert [int(row["rhs"]) for row in rows] == [0, 1]

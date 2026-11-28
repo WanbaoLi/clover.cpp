@@ -271,7 +271,7 @@ static int run(SolveOptions o,int rank,int ranks) {
   }
 #endif
   if(o.method=="auto") o.method="bicgstab";
-  if((o.profile_mg || o.mg_max_iters || !o.sap_block.empty() || o.mg_outer!="fbicgstab") && o.method!="mg")
+  if((o.profile_mg || o.mg_max_iters || !o.sap_block.empty() || o.mg_outer_requested) && o.method!="mg")
     throw std::runtime_error("MG-specific options require a multigrid solve");
   if(o.precision=="single" && o.method!="mg")
     throw std::runtime_error("--precision single requires a multigrid solve");
@@ -390,7 +390,7 @@ static int run(SolveOptions o,int rank,int ranks) {
         <<"\nprecision\t"<<o.precision<<"\nrequested_method\t"<<requested_method<<"\nsolver\t"<<o.method<<"\nsap_block\t"<<sap_block<<"\nthreads_per_rank\t"<<o.threads<<"\nnvec\t"<<o.vectors<<"\nsetup_steps\t"<<o.setup_steps
         <<"\nsmoother_iters\t"<<o.smooth_steps<<"\nmg_max_iters\t"<<(o.mg_max_iters ? o.mg_max_iters : 5000)
         <<"\nmg_outer\t"<<(o.method=="mg" ? o.mg_outer : "NA")
-        <<"\ngcr_restart\t"<<(o.mg_outer=="gcr" ? o.gcr_restart : 0)
+        <<"\ngcr_restart\t"<<(o.method=="mg" && o.mg_outer=="gcr" ? o.gcr_restart : 0)
         <<"\nsetup_seconds\t"<<setup_seconds<<"\nfields\t"<<o.fields
         <<"\nbasis\tBridge Dirac\nnormalization\t2*kappa\n";
     if (o.compact_eo) meta<<"compact_eo\t1\n";

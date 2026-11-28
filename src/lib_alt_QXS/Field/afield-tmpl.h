@@ -702,6 +702,47 @@ REALTYPE AField<REALTYPE, QXS>::norm2() const
 }
 
 
+// Store b-Dx and reduce its norm in one scan. Use the same grouping as norm2().
+template<typename REALTYPE>
+REALTYPE AField<REALTYPE, QXS>::residual_norm2(const AField& rhs)
+{
+  assert(rhs.check_size(nin(), nvol(), nex()));
+  const int tiles = nvol() / VLEN;
+  const int outer = std::max(tiles, nin());
+  const int inner = tiles * nin() / outer;
+  int ith, nth, begin, end;
+  set_threadtask(ith, nth, begin, end, outer);
+  svbool_t pg = set_predicate();
+  svreal_t total;
+  set_vec(pg, total, 0.0);
+#pragma omp barrier
+  for (int ex = 0; ex < nex(); ++ex) {
+    svreal_t subtotal;
+    set_vec(pg, subtotal, 0.0);
+    for (int i = begin; i < end; ++i) {
+      svreal_t squares;
+      set_vec(pg, squares, 0.0);
+      for (int j = 0; j < inner; ++j) {
+        const int offset = VLEN * (j + inner * (i + outer * ex));
+        svreal_t image, residual;
+        load_vec(pg, image, ptr(offset));
+        load_vec(pg, residual, rhs.ptr(offset));
+        sub_vec(pg, residual, image);
+        save_vec(pg, ptr(offset), residual);
+        add_norm2_vec(pg, squares, residual);
+      }
+      add_vec(pg, subtotal, squares);
+    }
+    add_vec(pg, total, subtotal);
+  }
+  REALTYPE result;
+  reduce_vec(pg, result, total);
+#pragma omp barrier
+  ThreadManager::reduce_sum_global(result, ith, nth);
+  return result;
+}
+
+
 //====================================================================
 template<typename REALTYPE>
 typename AField<REALTYPE, QXS>::complex_t
