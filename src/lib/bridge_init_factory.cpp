@@ -23,14 +23,10 @@
 #include "Action/action.h"
 #include "Smear/smear.h"
 #include "Smear/projection.h"
-#include "Measurements/Gauge/gaugeFixing.h"
 #include "Measurements/Gauge/staple.h"
 #include "Measurements/Fermion/source.h"
 #include "Tools/randomNumbers.h"
 #include "Tools/gammaMatrixSet.h"
-#ifdef USE_FFTWLIB
-#include "Tools/fft.h"
-#endif
 
 #ifdef USE_FACTORY_AUTOREGISTER
 #else
@@ -46,14 +42,10 @@ bool bridge_init_factory()
   result &= Action::init_factory();
   result &= Projection::init_factory();
   result &= Smear::init_factory();
-  result &= GaugeFixing::init_factory();
   result &= Source::init_factory();
   result &= Staple::init_factory();
   result &= RandomNumbers::init_factory();
   result &= GammaMatrixSet::init_factory();
-#ifdef USE_FFTWLIB
-  result &= FFT::init_factory();
-#endif
 
   return result;
 }
@@ -84,7 +76,6 @@ void bridge_report_factory()
   Projection::Factory::print("Projection");
   Smear::Factory::print("Smear");
 
-  GaugeFixing::Factory::print("GaugeFixing");
 
   Source::Factory::print("Source");
 

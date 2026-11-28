@@ -117,7 +117,6 @@ class QxsSystemImpl : public QxsSystem {
   AFopr_Clover<FineField> qxs;
   FineField qb,qx;
   std::unique_ptr<AFopr_Clover_dd<FloatField>> dd;
-  std::unique_ptr<AFopr_dd<FloatField>> smoother;
   ASolver_MG<FineField> mg;
 
 public:
@@ -153,9 +152,6 @@ public:
     Parameters ddp=op;ddp.set_int_vector("sap_block",block);ddp.set_int_vector("block_size",block);
     dd.reset(new AFopr_Clover_dd<FloatField>(ddp));dd->set_config(&gauge);
     mg.set_parameters(mgp);mg.set_foprD(&qxs);mg.set_foprF(dd.get());
-    if (mg.use_fopr_for_smoother()) {
-      smoother.reset(mg.new_fopr_smoother(ddp));smoother->set_config(&gauge);mg.set_fopr_smoother(smoother.get());
-    }
     mg.init_solver();Timer setup("mg_setup");setup.start();mg.run_setup();setup.stop();
     setup_seconds=setup.elapsed_sec();
   }

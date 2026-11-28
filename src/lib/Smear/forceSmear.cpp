@@ -17,8 +17,6 @@
 
 #include "lib/Smear/forceSmear_APE.h"
 #include "lib/Smear/forceSmear_HYP.h"
-#include "lib/Smear/forceSmear_APE_SF.h"
-#include "lib/Smear/forceSmear_HYP_SF.h"
 
 template<>
 bool ForceSmear::init_factory()
@@ -27,8 +25,6 @@ bool ForceSmear::init_factory()
 
   result &= ForceSmear_APE::register_factory();
   result &= ForceSmear_HYP::register_factory();
-  result &= ForceSmear_APE_SF::register_factory();
-  result &= ForceSmear_HYP_SF::register_factory();
 
   return result;
 }

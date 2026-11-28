@@ -18,8 +18,6 @@
 #include "lib/Smear/smear_APE.h"
 #include "lib/Smear/smear_APE_spatial.h"
 #include "lib/Smear/smear_HYP.h"
-#include "lib/Smear/smear_APE_SF.h"
-#include "lib/Smear/smear_HYP_SF.h"
 
 template<>
 bool Smear::init_factory()
@@ -29,8 +27,6 @@ bool Smear::init_factory()
   result &= Smear_APE::register_factory();
   result &= Smear_APE_spatial::register_factory();
   result &= Smear_HYP::register_factory();
-  result &= Smear_APE_SF::register_factory();
-  result &= Smear_HYP_SF::register_factory();
 
   return result;
 }

@@ -62,7 +62,6 @@ class ASolver_MG : public ASolver<AFIELD>
   // fine grid fermion operators: only references
   AFopr<AFIELD> *m_afopr_fineD;         // assumes double prec.
   AFopr_dd<AFIELD_f> *m_afopr_fineF;    //  a block version is required
-  AFopr_dd<AFIELD_f> *m_afopr_smoother; //  a block version is required
 
   // coarse grid fermion operator: I am the owner
   unique_ptr<AFopr<AFIELD_f> > m_afopr_coarse;
@@ -144,9 +143,6 @@ class ASolver_MG : public ASolver<AFIELD>
   AFopr<AFIELD> *get_fopr() { return m_afopr_fineD; }
   AFopr<AFIELD> *get_foprD() { return m_afopr_fineD; }
   AFopr_dd<AFIELD_f> *get_foprF() { return m_afopr_fineF; }
-  AFopr_dd<AFIELD_f> *get_fopr_smoother() { return m_afopr_smoother; }
-
-  AFopr_dd<AFIELD_f> *new_fopr_smoother(const Parameters& param) const;
 
   AFopr<AFIELD_f> *get_fopr_coarse() { return m_afopr_coarse.get(); }
 
@@ -155,7 +151,6 @@ class ASolver_MG : public ASolver<AFIELD>
 
   void set_foprF(AFopr_dd<AFIELD_f> *foprF);
 
-  void set_fopr_smoother(AFopr_dd<AFIELD_f> *foprF);
 
   void set_lattice(const vector<int>& sap_block_size);
 
@@ -176,8 +171,6 @@ class ASolver_MG : public ASolver<AFIELD>
 
   int outer_iterations(int operator_count) const;
   void reset_flop_count();
-
-  bool use_fopr_for_smoother() const;
 
  protected:
 

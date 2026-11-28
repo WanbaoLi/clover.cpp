@@ -58,15 +58,10 @@ inline int correct_normal(Field_F& x, const Field_F& residual, OddSchur& op,
 
   AFopr_Clover<DoubleField> dirac(fermion);
   AFopr_Clover_dd<FloatField> packed(fermion);
-  std::unique_ptr<AFopr_dd<FloatField>> smoother;
   ASolver_MG<DoubleField> solver;
   dirac.set_config(&fat);dirac.set_mode("D");
   packed.set_config(&fat);
   solver.set_parameters(settings);solver.set_foprD(&dirac);solver.set_foprF(&packed);
-  if(solver.use_fopr_for_smoother()) {
-    smoother.reset(solver.new_fopr_smoother(fermion));
-    smoother->set_config(&fat);solver.set_fopr_smoother(smoother.get());
-  }
   solver.init_solver();solver.run_setup();
 
   Field_F source(volume,1),full(volume,1),odd(half_volume,1),weighted(half_volume,1);

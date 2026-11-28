@@ -25,8 +25,6 @@
 #include "source_MomentumWall.h"
 #include "source_Random.h"
 
-#include "source_Staggered_Wall_Evenodd.h"
-#include "source_Staggered_Wall_Cube.h"
 
 bool Source::init_factory()
 {
@@ -38,8 +36,6 @@ bool Source::init_factory()
   result &= Source_MomentumWall::register_factory();
   result &= Source_Random::register_factory();
 
-  result &= Source_Staggered_Wall_Evenodd::register_factory();
-  result &= Source_Staggered_Wall_Cube::register_factory();
 
   return result;
 }

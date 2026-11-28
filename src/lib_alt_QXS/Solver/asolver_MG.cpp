@@ -31,15 +31,6 @@
 #include "lib_alt/Solver/asolver_SAP_MINRES.h"
 #include "lib_alt/Solver/asolver_SAP.h"
 
-#ifdef USE_QWSLIB
-#define USE_SAP_QWS
-#endif
-
-#ifdef USE_SAP_QWS
-// use QWS
-#include "lib_alt_QXS/Solver/asolver_SAP_QWS.h"
-#endif
-
 typedef AField<float, QXS>    AField_f;
 typedef AField<double, QXS>   AField_d;
 
@@ -50,20 +41,11 @@ using MultiGrid_t = MultiGrid_Clover<AField_f, AField_f>;
 template<class Field> using FoprD_t = AFopr_Clover<Field>;
 using FoprF_t      = AFopr_Clover_dd<AField_f>;
 using FoprCoarse_t = AFopr_Clover_coarse<AField_f>;
-#ifdef USE_SAP_QWS
-#define USE_FOPR_FOR_SMOOTHER
-using FoprSmoother_t = AFopr_Clover_QWS_dd<AField_f>;
-#endif
 
 // solver types
 template<class Field> using OuterSolver_t = ASolver_FBiCGStab<Field>;
 using CoarseSolver_t = ASolver_BiCGStab_Cmplx<AField_f>;
-#ifdef USE_SAP_QWS
-using Smoother_t = ASolver_SAP_QWS<AField_f>;
-#else
 using Smoother_t = ASolver_SAP<AField_f>;
-#define USE_SAP_FOR_SMOOTHER
-#endif
 
 #include "lib_alt/Solver/asolver_GCR.h"
 #include "lib_alt/Solver/asolver_MG-tmpl.h"

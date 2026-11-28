@@ -14,8 +14,11 @@ if(CLOVER_QXS STREQUAL "sve512")
   include(CheckCXXSourceCompiles)
   set(qxs_sve_flags -march=armv8.2-a+sve+sve2 -msve-vector-bits=512)
   string(JOIN " " CMAKE_REQUIRED_FLAGS ${qxs_sve_flags})
-  check_cxx_source_compiles("#include <arm_sve.h>
-static_assert(__ARM_FEATURE_SVE_BITS == 512, "SVE512"); int main() { return 0; }" CLOVER_HAS_SVE512_COMPILER)
+  check_cxx_source_compiles([=[
+#include <arm_sve.h>
+static_assert(__ARM_FEATURE_SVE_BITS == 512, "Expected 512-bit SVE");
+int main() { return 0; }
+]=] CLOVER_HAS_SVE512_COMPILER)
   unset(CMAKE_REQUIRED_FLAGS)
   if(NOT CLOVER_HAS_SVE512_COMPILER)
     message(FATAL_ERROR "sve512 requires an AArch64 compiler with 512-bit SVE2 support")
@@ -52,7 +55,7 @@ file(CONFIGURE OUTPUT "${qxs_inline}/define_vlen.h" CONTENT "${vlen}" @ONLY)
 file(GLOB_RECURSE bridge_sources CONFIGURE_DEPENDS
   "src/lib/*.cpp" "src/lib_alt/*.cpp" "src/lib_alt_QXS/*.cpp")
 list(FILTER bridge_sources EXCLUDE REGEX
-  "/(Communicator/(Single|FJMPI)|ResourceManager/OpenMP_stub|(Field|Force/Fermion|Measurements/Fermion)/Org|inline_ACLE)/")
+  "/(Field|Force/Fermion)/Org/")
 add_library(bridge STATIC ${bridge_sources})
 target_include_directories(bridge PUBLIC "${generated}"
   src src/lib src/lib_alt src/lib_alt_QXS)

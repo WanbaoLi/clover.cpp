@@ -26,18 +26,6 @@
 #define VLENXS       4
 #define VLENYS       4
 
-#ifdef QWS_H
-// check if consistent with qws.h
-#if (VLENS != VLENS_QXS)
-#error bad VLENS
-#endif
-#if (VLEND != VLEND_QXS)
-#error bad VLEND
-#endif
-#undef VLENS
-#undef VLEND
-#endif
-
 #define VLENS    VLENS_QXS
 #define VLEND    VLEND_QXS
 

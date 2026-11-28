@@ -1,7 +1,8 @@
 # clover.cpp
 
-Bridge++ 2.1.3 with the Wilson–Clover propagator driver from clover.cpp develop.
-Build on ITP node5001 with Open MPI 4.1.4, GCC, CMake and Ninja.
+CPU package based on Bridge++ 2.1.3 for Wilson–Clover propagator solves and HMC
+configuration generation. Build on ITP node5001 with Open MPI 4.1.4, GCC,
+CMake and Ninja.
 
 ```bash
 ./build.sh
@@ -41,8 +42,8 @@ The light-quark run follows the C24P34 entry in the supplied PyQUDA input:
 24³×64, mass -0.277, Clover coefficient 1/0.951479³, one stout step at
 rho 0.125, antiperiodic time, t=0 wall source, at most 1000 outer iterations. The script uses SAP blocks 6×6×6×4,
 24 Bridge++ setup vectors, four setup refinement steps and four smoothing
-sweeps. Bridge++ uses CPU FBiCGStab and solves the twelve columns in order
-with a shared hierarchy. Results are under `build/mg-c24p34.*/`.
+sweeps. The default outer solver is GCR. All twelve columns share one MG
+hierarchy. Results are under `build/mg-c24p34-<outer>.*/`.
 
 The benchmark reports one and twelve columns for both precisions. Pass single
 or double to run one precision. The FP32 and FP64 true residual limits are 1e-6

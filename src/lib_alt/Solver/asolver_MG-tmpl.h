@@ -166,30 +166,6 @@ void ASolver_MG<AFIELD>::set_parameters(
 
 //====================================================================
 template<typename AFIELD>
-bool ASolver_MG<AFIELD>::use_fopr_for_smoother() const
-{
-#ifdef USE_FOPR_FOR_SMOOTHER
-  return true;
-#else
-  return false;
-#endif
-}
-
-
-//====================================================================
-template<typename AFIELD>
-AFopr_dd<typename ASolver_MG<AFIELD>::AFIELD_f> *ASolver_MG<AFIELD>::new_fopr_smoother(const Parameters& param) const
-{
-#ifdef USE_FOPR_FOR_SMOOTHER
-  return new FoprSmoother_t(param);
-#else
-  return nullptr;
-#endif
-}
-
-
-//====================================================================
-template<typename AFIELD>
 void ASolver_MG<AFIELD>::set_foprD(AFopr<AFIELD> *foprD)
 {
   int th = ThreadManager::get_thread_id();
@@ -216,26 +192,6 @@ void ASolver_MG<AFIELD>::set_foprF(AFopr_dd<AFIELD_f> *foprF)
                  class_name.c_str());
     exit(EXIT_FAILURE);
   }
-#ifndef USE_FOPR_FOR_SMOOTHER
-  m_afopr_smoother = m_afopr_fineF;
-#endif
-}
-
-
-//====================================================================
-template<typename AFIELD>
-void ASolver_MG<AFIELD>::set_fopr_smoother(AFopr_dd<AFIELD_f> *foprF)
-{
-#ifdef USE_FOPR_FOR_SMOOTHER
-  m_afopr_smoother = dynamic_cast<FoprSmoother_t *>(foprF);
-  if (m_afopr_fineF == nullptr) {
-    vout.crucial("%s: bad afopr: only AFopr_Clover_dd is vaild for Fopr smoother]\n",
-                 class_name.c_str());
-    exit(EXIT_FAILURE);
-  }
-#else
-  vout.general("%s: set_foprF_smoother is called but ignored.  The same one given with set_foprF will be used.\n", class_name.c_str());
-#endif
 }
 
 
@@ -317,12 +273,8 @@ void ASolver_MG<AFIELD>::init_coarse_grid()
   m_asolver_coarse.reset(asolver_coarse);
 
   // initialize smoother
-#ifdef USE_SAP_FOR_SMOOTHER
   Smoother_t *asolver_smoother =
-    new Smoother_t(m_afopr_smoother, m_multigrid->get_block_index());
-#else
-  Smoother_t *asolver_smoother = new Smoother_t(m_afopr_smoother);
-#endif
+    new Smoother_t(m_afopr_fineF, m_multigrid->get_block_index());
   asolver_smoother->set_parameters(m_smoother_niter, m_smoother_stop_cond);
   m_asolver_smoother.reset(asolver_smoother);
 

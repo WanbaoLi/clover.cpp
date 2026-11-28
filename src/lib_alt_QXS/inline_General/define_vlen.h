@@ -16,10 +16,8 @@
 #ifndef QXS_DEFINE_VLEN_INCLUDED
 #define QXS_DEFINE_VLEN_INCLUDED
 
-#ifndef QWS_H
 #define VLEND     8
 #define VLENS     16
-#endif
 
 #define VLENXD    4
 #define VLENYD    2

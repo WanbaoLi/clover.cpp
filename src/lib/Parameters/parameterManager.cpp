@@ -13,9 +13,6 @@
 
 #include "parameterManager_YAML.h"
 
-#ifdef USE_XML
-#include "parameterManager_XML.h"
-#endif
 
 const std::string ParameterManager::class_name = "ParameterManager";
 
@@ -42,10 +39,6 @@ void ParameterManager::read(const std::string& params_file, Parameters& params)
 
   if (ext == ".yaml") {
     ParameterManager_YAML().read_params(params_file, params);
-#ifdef USE_XML
-  } else if (ext == ".xml") {
-    ParameterManager_XML().read_params(params_file, params);
-#endif
   } else {
     vout.crucial("Error at %s: unrecognized file type: %s\n", class_name.c_str(), params_file.c_str());
     exit(EXIT_FAILURE);

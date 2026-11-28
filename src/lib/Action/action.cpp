@@ -21,8 +21,6 @@
 
 #include "Gauge/action_G_Plaq.h"
 #include "Gauge/action_G_Rectangle.h"
-#include "Gauge/action_G_Plaq_SF.h"
-#include "Gauge/action_G_Rectangle_SF.h"
 
 bool Action::init_factory()
 {
@@ -30,8 +28,6 @@ bool Action::init_factory()
 
   result &= Action_G_Plaq::register_factory();
   result &= Action_G_Rectangle::register_factory();
-  result &= Action_G_Plaq_SF::register_factory();
-  result &= Action_G_Rectangle_SF::register_factory();
 
   return result;
 }
