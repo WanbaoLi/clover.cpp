@@ -19,8 +19,11 @@ void AFopr_Clover_eo<AFIELD>::init(const Parameters& params)
 {
   ThreadManager::assert_single_thread(class_name);
 
-  int req_comm = 1;  // set 1 if communication forced any time
-  //int req_comm = 0;
+  int req_comm = 0;
+  const char *force_comm = std::getenv("CLOVER_EO_FORCE_COMM");
+  if (force_comm && std::string(force_comm) == "1") req_comm = 1;
+  const char *fused = std::getenv("CLOVER_EO_FUSED");
+  m_use_fused = !fused || std::string(fused) != "0";
 
   std::string vlevel;
   if (!params.fetch_string("verbose_level", vlevel)) {
@@ -128,7 +131,10 @@ void AFopr_Clover_eo<AFIELD>::init(const Parameters& params)
   setup_channels();
 
   // gauge configuration.
-  m_Ueo.reset(m_Ndf, m_Nst, m_Ndim);
+  const char *recon = std::getenv("CLOVER_EO_RECON12");
+  m_recon12 = recon && std::string(recon) == "1";
+  if (m_recon12) m_Ueo12.reset(BridgeQXS::NDF12, m_Nst, m_Ndim);
+  else m_Ueo.reset(m_Ndf, m_Nst, m_Ndim);
   m_Ulex.reset(m_Ndf, m_Nst, m_Ndim);
 
   int Ndm2 = m_Nd * m_Nd / 2;
@@ -156,6 +162,7 @@ void AFopr_Clover_eo<AFIELD>::init(const Parameters& params)
   int NinF = 2 * m_Nc * m_Nd;
   m_v1.reset(NinF, m_Nst2, 1);
   m_v2.reset(NinF, m_Nst2, 1);
+  m_v3.reset(NinF, m_Nst2, 1);
 
   m_z1.reset(NinF, m_Nst, 1);  // used in convert/revese.
 
@@ -257,6 +264,8 @@ void AFopr_Clover_eo<AFIELD>::set_parameters(const real_t CKs,
     m_boundary.resize(m_Ndim);
     for (int mu = 0; mu < m_Ndim; ++mu) {
       m_boundary[mu] = bc[mu];
+      m_link_boundary[mu] = Communicator::ipe(mu) == Communicator::npe(mu) - 1
+                          ? bc[mu] : 1;
     }
   }
 
@@ -338,13 +347,16 @@ void AFopr_Clover_eo<AFIELD>::set_config_impl(Field *u)
   AIndex_eo<real_t, QXS>  index_eo;
 
   set_threadtask_mult(ith, nth, is, ns, m_Nst);
+  const int width = m_recon12 ? BridgeQXS::NDF12 : m_Ndf;
+  AFIELD& gauge = m_recon12 ? m_Ueo12 : m_Ueo;
 
   for (int ex = 0; ex < m_Ndim; ++ex) {
     for (int site = is; site < ns; ++site) {
-      for (int in = 0; in < m_Ndf; ++in) {
-        int iv1 = index_lex2.idx(in, m_Ndf, site, ex);
-        int iv2 = index_eo.idx(in, m_Ndf, site, ex);
-        m_Ueo.e(iv2) = m_Ulex.cmp(iv1);
+      for (int in = 0; in < width; ++in) {
+        const int component = m_recon12 ? 6 * (in / 4) + in % 4 : in;
+        int iv1 = index_lex2.idx(component, m_Ndf, site, ex);
+        int iv2 = index_eo.idx(in, width, site, ex);
+        gauge.e(iv2) = m_Ulex.cmp(iv1);
       }
     }
   }
@@ -628,6 +640,13 @@ template<typename AFIELD>
 void AFopr_Clover_eo<AFIELD>::D(AFIELD& v, const AFIELD& w)
 {
 #pragma omp barrier
+#ifdef CHIRAL_ROTATION
+  if (m_use_fused) {
+    mult_Meo_cswinv_qxs(m_v3, w, w, m_To_inv, 1, 0);
+    mult_Meo_cswinv_qxs(v, m_v3, w, m_Te_inv, 0, 1);
+    return;
+  }
+#endif
   Meo(m_v1, w, 1);
   mult_cswinv(v, m_v1, 1);
   Meo(m_v1, v, 0);
@@ -674,11 +693,26 @@ void AFopr_Clover_eo<AFIELD>::mult_Meo_qxs(AFIELD& v,
                                            const AFIELD& w, const AFIELD& x,
                                            const int ieo, const int iflag)
 {
+  mult_Meo_qxs_impl(v, w, x, nullptr, ieo, iflag);
+}
+
+template<typename AFIELD>
+void AFopr_Clover_eo<AFIELD>::mult_Meo_cswinv_qxs(
+    AFIELD& v, const AFIELD& w, const AFIELD& x, AFIELD& inverse,
+    int ieo, int iflag_aypx)
+{
+  mult_Meo_qxs_impl(v, w, x, inverse.ptr(0), ieo, iflag_aypx);
+}
+
+template<typename AFIELD>
+void AFopr_Clover_eo<AFIELD>::mult_Meo_qxs_impl(
+    AFIELD& v, const AFIELD& w, const AFIELD& x, real_t *ct, int ieo, int iflag)
+{
   real_t *v2 = v.ptr(0);
   real_t *v1 = const_cast<AFIELD *>(&w)->ptr(0);
   real_t *xp = const_cast<AFIELD *>(&x)->ptr(0);
 
-  real_t *up = m_Ueo.ptr(0);
+  real_t *up = (m_recon12 ? m_Ueo12 : m_Ueo).ptr(0);
 
   int ith = ThreadManager::get_thread_id();
 
@@ -695,18 +729,45 @@ void AFopr_Clover_eo<AFIELD>::mult_Meo_qxs(AFIELD& v,
     real_t *buf1_zm = (real_t *)chsend_up[2].ptr();
     real_t *buf1_tp = (real_t *)chsend_dn[3].ptr();
     real_t *buf1_tm = (real_t *)chsend_up[3].ptr();
-    BridgeQXS::mult_wilson_eo_1_dirac(buf1_xp, buf1_xm, buf1_yp, buf1_ym,
+    if (m_recon12) {
+      BridgeQXS::mult_wilson_eo_1_recon12_dirac(buf1_xp, buf1_xm, buf1_yp, buf1_ym,
+                                      buf1_zp, buf1_zm, buf1_tp, buf1_tm,
+                                      up, v1, m_link_boundary,
+                                      m_Nsize, do_comm, &m_Leo[0], ieo, ct ? 0 : iflag);
+    } else {
+      BridgeQXS::mult_wilson_eo_1_dirac(buf1_xp, buf1_xm, buf1_yp, buf1_ym,
                                       buf1_zp, buf1_zm, buf1_tp, buf1_tm,
                                       up, v1, &m_boundary[0],
-                                      m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+                                      m_Nsize, do_comm, &m_Leo[0], ieo, ct ? 0 : iflag);
+    }
 
 #pragma omp barrier
 
     if (ith == 0) chset_send.start();
   }
 
-  BridgeQXS::mult_wilson_eo_bulk_dirac(v2, up, v1, xp, m_CKs, &m_boundary[0],
-                                       m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+#ifdef CHIRAL_ROTATION
+  if (ct) {
+    if (m_recon12) {
+      BridgeQXS::mult_clover_eo_bulk_cswinv_recon12_dirac_chrot(
+        v2, m_v1.ptr(0), up, ct, v1, xp, m_CKs, m_link_boundary,
+        m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+    } else {
+      BridgeQXS::mult_clover_eo_bulk_cswinv_dirac_chrot(
+        v2, m_v1.ptr(0), up, ct, v1, xp, m_CKs, &m_boundary[0],
+        m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+    }
+  } else
+#endif
+  {
+    if (m_recon12) {
+      BridgeQXS::mult_wilson_eo_bulk_recon12_dirac(v2, up, v1, xp, m_CKs, m_link_boundary,
+                                         m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+    } else {
+      BridgeQXS::mult_wilson_eo_bulk_dirac(v2, up, v1, xp, m_CKs, &m_boundary[0],
+                                         m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+    }
+  }
 
   if (do_comm_any > 0) {
     if (ith == 0) chset_recv.wait();
@@ -722,11 +783,36 @@ void AFopr_Clover_eo<AFIELD>::mult_Meo_qxs(AFIELD& v,
     real_t *buf2_tp = (real_t *)chrecv_up[3].ptr();
     real_t *buf2_tm = (real_t *)chrecv_dn[3].ptr();
 
-    BridgeQXS::mult_wilson_eo_2_dirac(v2, up, v1, xp,
-                                      buf2_xp, buf2_xm, buf2_yp, buf2_ym,
-                                      buf2_zp, buf2_zm, buf2_tp, buf2_tm,
-                                      m_CKs, &m_boundary[0],
-                                      m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+#ifdef CHIRAL_ROTATION
+    if (ct) {
+      if (m_recon12) {
+        BridgeQXS::mult_clover_eo_2_cswinv_recon12_dirac_chrot(
+          v2, m_v1.ptr(0), up, ct, v1, xp, buf2_xp, buf2_xm, buf2_yp, buf2_ym,
+          buf2_zp, buf2_zm, buf2_tp, buf2_tm, m_CKs, m_link_boundary,
+          m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+      } else {
+        BridgeQXS::mult_clover_eo_2_cswinv_dirac_chrot(
+          v2, m_v1.ptr(0), up, ct, v1, xp, buf2_xp, buf2_xm, buf2_yp, buf2_ym,
+          buf2_zp, buf2_zm, buf2_tp, buf2_tm, m_CKs, &m_boundary[0],
+          m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+      }
+    } else
+#endif
+    {
+      if (m_recon12) {
+        BridgeQXS::mult_wilson_eo_2_recon12_dirac(v2, up, v1, xp,
+                                        buf2_xp, buf2_xm, buf2_yp, buf2_ym,
+                                        buf2_zp, buf2_zm, buf2_tp, buf2_tm,
+                                        m_CKs, m_link_boundary,
+                                        m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+      } else {
+        BridgeQXS::mult_wilson_eo_2_dirac(v2, up, v1, xp,
+                                        buf2_xp, buf2_xm, buf2_yp, buf2_ym,
+                                        buf2_zp, buf2_zm, buf2_tp, buf2_tm,
+                                        m_CKs, &m_boundary[0],
+                                        m_Nsize, do_comm, &m_Leo[0], ieo, iflag);
+      }
+    }
 
     if (ith == 0) chset_send.wait();
   }

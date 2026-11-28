@@ -211,6 +211,11 @@ class AField<REALTYPE, QXS>
 
   real_t norm2(void) const;
 
+  void bicg_update_p(complex_t minus_omega, complex_t beta,
+                     const AField& v, const AField& r);
+  real_t bicg_update_xr(complex_t omega, complex_t alpha, AField& r,
+                        const AField& p, const AField& t);
+
   complex_t dotc_and_norm2(real_t&, real_t&, const AField<real_t, QXS>&) const;
 };
 

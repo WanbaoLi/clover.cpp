@@ -1339,6 +1339,27 @@ namespace {
 
 
 //====================================================================
+#ifdef CHIRAL_ROTATION
+  inline void finish_clover_eo(real_t *out, real_t *ct, real_t *in,
+                               real_t *xp, int subtract)
+  {
+    if (!subtract) {
+      mult_cswinv_chrot(out, ct, in);
+      return;
+    }
+
+    Vsimd_t result[NVCD];
+    mult_cswinv_chrot(&result[0].v[0], ct, in);
+    svbool_t pg = set_predicate();
+    for (int i = 0; i < NVCD; ++i) {
+      svreal_t x, y;
+      load_vec(pg, x, xp + VLEN * i);
+      load_vec(pg, y, result[i].v);
+      sub_vec(pg, x, y);
+      save_vec(pg, out + VLEN * i, x);
+    }
+  }
+#endif
 } // nameless namespace end
 
 #endif

@@ -156,6 +156,10 @@ void ASolver_SAP<AFIELD>::solve(AFIELD& x, const AFIELD& b,
 #endif
 
     sub(x, m_r);
+#ifndef DEBUG
+    // Only the next sweep consumes D*x-b. The caller receives the correction x.
+    if (iter + 1 == m_Niter) break;
+#endif
     m_fopr->mult(m_r, x);
     sub(m_r, b);
 
@@ -195,6 +199,9 @@ double ASolver_SAP<AFIELD>::flop_count()
   double flop_sub    = 2.0 * Nin * Nvol * NPE;
   double flop
     = m_Nconv * (2 * flop_minres + 2 * flop_mult + 2 * flop_sub);
+#ifndef DEBUG
+  if (m_Nconv > 0) flop -= flop_mult + Nin * static_cast<double>(Nvol) * NPE;
+#endif
   return flop;
 }
 

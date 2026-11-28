@@ -60,6 +60,7 @@ class ASolver_BiCGStab_Cmplx : public ASolver<AFIELD>
 
   AFopr<AFIELD> *m_fopr;    //!< fermion operator.
 
+  bool m_use_fused;
   int m_Niter;              //!< maximum iteration number.
   real_t m_Stop_cond;       //!< stopping criterion (squared).
 

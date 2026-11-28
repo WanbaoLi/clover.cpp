@@ -48,3 +48,19 @@ The benchmark reports one and twelve columns for both precisions. Pass single
 or double to run one precision. The FP32 and FP64 true residual limits are 1e-6
 and 1e-9. The independent check uses FP64 in both cases. For FP32 the recursive
 stop threshold is 2.5e-7 to allow for rounding error.
+
+## Wilson–Clover 2+1 ensemble generation
+
+The new build-tree launcher is build/bin/clover-hmc. It needs Python 3.9+
+with NumPy and uses the MPI launcher available on PATH. Set CLOVER_HMC_PYTHON
+to select an interpreter. To run one small test trajectory:
+
+    build/bin/clover-hmc run --dims 2 2 2 2 --seed 1703 --tau 0.12 \
+      --outer-steps 1 --inner-steps 1 --output build/hmc-smoke
+
+The resume and export commands share the same checkpoint format. See
+build/bin/clover-hmc run --help for the archived Chroma restart option.
+The original Wilson Nf=2 generator remains available as build/bridge-hmc.
+
+The default QXS build uses the generic implementation. On AArch64,
+CMake accepts -DCLOVER_QXS=sve512 with a supporting SVE2 toolchain.

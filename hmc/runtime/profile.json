@@ -1,0 +1,98 @@
+{
+  "name": "cfg3000-seoprec-clover",
+  "source_xml_sha256": "8338edef4a6e9d4faefbd430cb91b7f58ec761cc9af9dc7c83569e60a996e463",
+  "groups": {
+    "outer": [
+      "logdet_2flav",
+      "logdet_1flav",
+      "has0",
+      "has1",
+      "has2",
+      "has3",
+      "has4",
+      "rat_3strange"
+    ],
+    "inner": [
+      "has_cancel_2flav",
+      "lw_tree_gauge"
+    ]
+  },
+  "hamiltonian": [
+    "logdet_2flav",
+    "logdet_1flav",
+    "rat_3strange",
+    "has0",
+    "has1",
+    "has2",
+    "has3",
+    "has4",
+    "has_cancel_2flav",
+    "lw_tree_gauge"
+  ],
+  "solvers": {
+    "has4": [
+      1e-12,
+      1000
+    ],
+    "has3": [
+      1e-12,
+      1000
+    ],
+    "has2": [
+      1e-12,
+      1000
+    ],
+    "has1": [
+      1e-12,
+      1000
+    ],
+    "has0": [
+      1e-12,
+      1000
+    ],
+    "has_cancel_2flav": [
+      1e-12,
+      200
+    ],
+    "rat_3strange": [
+      1e-09,
+      5000
+    ]
+  },
+  "masses": {
+    "has4": [
+      -0.279,
+      -0.2785
+    ],
+    "has3": [
+      -0.2785,
+      -0.2775
+    ],
+    "has2": [
+      -0.2775,
+      -0.2755
+    ],
+    "has1": [
+      -0.2755,
+      -0.2715
+    ],
+    "has0": [
+      -0.2715,
+      -0.2635
+    ],
+    "has_cancel_2flav": [
+      -0.2635,
+      null
+    ]
+  },
+  "default_integration": {
+    "tau": 1.0,
+    "outer_steps": 10,
+    "inner_steps": 2
+  },
+  "chroma_action_conventions": {
+    "gauge_beta": 6.2,
+    "gauge_u0": 0.85552,
+    "strange_mass": -0.24
+  }
+}

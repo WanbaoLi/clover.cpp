@@ -65,7 +65,11 @@ class AFopr_Clover_eo : public AFopr<AFIELD>
 
   std::string m_mode; //!< mult mode
 
-  AFIELD m_v1, m_v2;  //!< working field.
+  AFIELD m_Ueo12;
+  int m_link_boundary[4];
+  bool m_recon12;
+  bool m_use_fused = true;
+  AFIELD m_v1, m_v2, m_v3;  //!< working field.
   AFIELD m_z1;        //!< lexical field: used in convert/reverse.
 
   Field_F m_w1, m_w2;
@@ -177,6 +181,11 @@ class AFopr_Clover_eo : public AFopr<AFIELD>
   void reverse(Field&, const AFIELD&);
 
  private:
+  void mult_Meo_cswinv_qxs(AFIELD&, const AFIELD&, const AFIELD&, AFIELD&,
+                           int ieo, int iflag_aypx);
+  void mult_Meo_qxs_impl(AFIELD&, const AFIELD&, const AFIELD&, real_t *ct,
+                         int ieo, int iflag);
+
   //! initial setup.
   void init(const Parameters& params);
 

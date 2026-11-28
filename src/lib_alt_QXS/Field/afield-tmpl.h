@@ -7,6 +7,7 @@
       @version $LastChangedRevision: 2499 $
 */
 
+#include <algorithm>
 #include <cassert>
 
 #include "lib_alt_QXS/inline/afield_th-inc.h"
@@ -795,18 +796,105 @@ AField<REALTYPE, QXS>::dotc_and_norm2(REALTYPE& norm2, REALTYPE& w_norm2,
   reduce_vec(pg, ati, yti);
   reduce_vec(pg, w_norm2, w2);
   reduce_vec(pg, norm2, v2);
-  real_t sum[4] = { atr, ati, w_norm2, norm2 };
-
-#pragma omp barrier
+  double sum[4] = { atr, ati, norm2, w_norm2 };
 
   ThreadManager::reduce_sum_global(sum, 4, ith, nth);
-  complex_t result = { sum[0], sum[1] };
+  complex_t result(sum[0], sum[1]);
 
-  w_norm2 = sum[2];
-  norm2   = sum[3];
+  norm2   = sum[2];
+  w_norm2 = sum[3];
 
   return result;
 }
 
+
+namespace {
+  // Match the four multiply-adds (including their rounding) in complex axpy.
+  inline void bicg_axpy(svbool_t pg, svreal_t& yr, svreal_t& yi,
+                        std::complex<real_t> a, svreal_t xr, svreal_t xi)
+  {
+    axpy_vec(pg, yr, a.real(), xr);
+    axpy_vec(pg, yr, -a.imag(), xi);
+    axpy_vec(pg, yi, a.real(), xi);
+    axpy_vec(pg, yi, a.imag(), xr);
+  }
+}
+
+template<typename REALTYPE>
+void AField<REALTYPE, QXS>::bicg_update_p(complex_t minus_omega, complex_t beta,
+                                          const AField& v, const AField& r)
+{
+  int ith, nth, is, ns;
+  set_threadtask(ith, nth, is, ns, m_nsizev / 2);
+  svbool_t pg = set_predicate();
+#pragma omp barrier
+  for (int i = is; i < ns; ++i) {
+    const int off = 2 * VLEN * i;
+    svreal_t pr, pi, vr, vi, rr, ri;
+    load_vec(pg, pr, ptr(off));
+    load_vec(pg, pi, ptr(off + VLEN));
+    load_vec(pg, vr, v.ptr(off));
+    load_vec(pg, vi, v.ptr(off + VLEN));
+    load_vec(pg, rr, r.ptr(off));
+    load_vec(pg, ri, r.ptr(off + VLEN));
+    bicg_axpy(pg, pr, pi, minus_omega, vr, vi);
+    bicg_axpy(pg, rr, ri, beta, pr, pi);
+    save_vec(pg, ptr(off), rr);
+    save_vec(pg, ptr(off + VLEN), ri);
+  }
+#pragma omp barrier
+}
+
+template<typename REALTYPE>
+REALTYPE AField<REALTYPE, QXS>::bicg_update_xr(complex_t omega, complex_t alpha,
+                                               AField& r, const AField& p,
+                                               const AField& t)
+{
+  const int sites = nvol() / VLEN;
+  const int components = nin() / 2;
+  const int outer = std::max(sites, components);
+  const int inner = sites * components / outer;
+  int ith, nth, is, ns;
+  set_threadtask(ith, nth, is, ns, outer);
+  svbool_t pg = set_predicate();
+  svreal_t total;
+  set_vec(pg, total, 0.0);
+#pragma omp barrier
+  for (int ex = 0; ex < nex(); ++ex) {
+    svreal_t subtotal;
+    set_vec(pg, subtotal, 0.0);
+    for (int i = is; i < ns; ++i) {
+      svreal_t squares;
+      set_vec(pg, squares, 0.0);
+      for (int j = 0; j < inner; ++j) {
+        const int off = 2 * VLEN * (j + inner * (i + outer * ex));
+        svreal_t xr, xi, rr, ri, pr, pi, tr, ti;
+        load_vec(pg, xr, ptr(off));
+        load_vec(pg, xi, ptr(off + VLEN));
+        load_vec(pg, rr, r.ptr(off));
+        load_vec(pg, ri, r.ptr(off + VLEN));
+        load_vec(pg, pr, p.ptr(off));
+        load_vec(pg, pi, p.ptr(off + VLEN));
+        load_vec(pg, tr, t.ptr(off));
+        load_vec(pg, ti, t.ptr(off + VLEN));
+        bicg_axpy(pg, xr, xi, omega, rr, ri);
+        bicg_axpy(pg, xr, xi, alpha, pr, pi);
+        bicg_axpy(pg, rr, ri, -omega, tr, ti);
+        save_vec(pg, ptr(off), xr);
+        save_vec(pg, ptr(off + VLEN), xi);
+        save_vec(pg, r.ptr(off), rr);
+        save_vec(pg, r.ptr(off + VLEN), ri);
+        add_norm2_vec(pg, squares, rr);
+        add_norm2_vec(pg, squares, ri);
+      }
+      add_vec(pg, subtotal, squares);
+    }
+    add_vec(pg, total, subtotal);
+  }
+  REALTYPE rr;
+  reduce_vec(pg, rr, total);
+  ThreadManager::reduce_sum_global(rr, ith, nth);
+  return rr;
+}
 
 //============================================================END=====

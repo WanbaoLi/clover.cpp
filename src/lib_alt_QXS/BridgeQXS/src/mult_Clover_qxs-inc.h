@@ -306,5 +306,111 @@ void BridgeQXS::mult_clover_cswinv_dirac_chrot(real_t *v2,
 }
 
 
+#ifdef CHIRAL_ROTATION
+#include "mult_Wilson_eo_bulk_qxs-inc.h"
+
+template<bool Recon>
+static void mult_clover_eo_bulk_cswinv_dirac_chrot_impl(
+    real_t *v2, real_t *v1_tmp, real_t *up, real_t *ct, real_t *v1, real_t *xp,
+    real_t kappa, int *bc, int *Nsize, int *do_comm, int *Leo, const int ieo,
+    const int iflag_aypx)
+{
+  static_assert(sizeof(Vsimd_t) == VLEN * sizeof(real_t), "packed Clover input");
+  wilson_eo_bulk<Recon>(up, v1, ct, Nsize, do_comm, Leo, ieo, bc,
+                 [&](int site, int x, int y, int z, int t, Vsimd_t *sum) {
+    const int offset = VLEN * NVCD * site;
+    const bool halo = eo_halo_site(x, y, z, t, Nsize, do_comm);
+    real_t *scaled = halo ? v1_tmp + offset : &sum[0].v[0];
+    svbool_t pg = set_predicate();
+    for (int i = 0; i < NVCD; ++i) {
+      svreal_t value;
+      load_vec(pg, value, sum[i].v);
+      scal_vec(pg, value, -kappa);
+      save_vec(pg, scaled + VLEN * i, value);
+    }
+    if (!halo) {
+      finish_clover_eo(v2 + offset, ct + VLEN * NDF * ND * site,
+                       scaled, xp + offset, iflag_aypx);
+    }
+  });
+}
+
+void BridgeQXS::mult_clover_eo_bulk_cswinv_dirac_chrot(
+    real_t *v2, real_t *v1_tmp, real_t *up, real_t *ct, real_t *v1, real_t *xp,
+    real_t kappa, int *bc, int *Nsize, int *do_comm, int *Leo, const int ieo,
+    const int iflag_aypx)
+{
+  mult_clover_eo_bulk_cswinv_dirac_chrot_impl<false>(v2, v1_tmp, up, ct, v1, xp, kappa, bc,
+      Nsize, do_comm, Leo, ieo, iflag_aypx);
+}
+
+void BridgeQXS::mult_clover_eo_bulk_cswinv_recon12_dirac_chrot(
+    real_t *v2, real_t *v1_tmp, real_t *up, real_t *ct, real_t *v1, real_t *xp,
+    real_t kappa, int *bc, int *Nsize, int *do_comm, int *Leo, const int ieo,
+    const int iflag_aypx)
+{
+  mult_clover_eo_bulk_cswinv_dirac_chrot_impl<true>(v2, v1_tmp, up, ct, v1, xp, kappa, bc,
+      Nsize, do_comm, Leo, ieo, iflag_aypx);
+}
+
+
+template<bool Recon>
+static void mult_clover_eo_2_cswinv_dirac_chrot_impl(
+    real_t *v2, real_t *v1_tmp, real_t *up, real_t *ct, real_t *v1, real_t *xp,
+    real_t *buf_xp, real_t *buf_xm, real_t *buf_yp, real_t *buf_ym,
+    real_t *buf_zp, real_t *buf_zm, real_t *buf_tp, real_t *buf_tm,
+    real_t kappa, int *bc, int *Nsize, int *do_comm, int *Leo, const int ieo,
+    const int iflag_aypx)
+{
+  if (Recon) {
+    BridgeQXS::mult_wilson_eo_2_recon12_dirac(v1_tmp, up, v1, xp, buf_xp, buf_xm,
+                                    buf_yp, buf_ym, buf_zp, buf_zm, buf_tp, buf_tm,
+                                    kappa, bc, Nsize, do_comm, Leo, ieo, 0);
+  } else {
+    BridgeQXS::mult_wilson_eo_2_dirac(v1_tmp, up, v1, xp, buf_xp, buf_xm,
+                                    buf_yp, buf_ym, buf_zp, buf_zm, buf_tp, buf_tm,
+                                    kappa, bc, Nsize, do_comm, Leo, ieo, 0);
+  }
+#pragma omp barrier
+  int ith, nth, is, ns;
+  set_threadtask(ith, nth, is, ns, Nsize[0] * Nsize[1] * Nsize[2] * Nsize[3]);
+  for (int site = is; site < ns; ++site) {
+    const int yzt = site / Nsize[0];
+    const int zt = yzt / Nsize[1];
+    if (eo_halo_site(site % Nsize[0], yzt % Nsize[1], zt % Nsize[2],
+                     zt / Nsize[2], Nsize, do_comm)) {
+      const int offset = VLEN * NVCD * site;
+      finish_clover_eo(v2 + offset, ct + VLEN * NDF * ND * site,
+                       v1_tmp + offset, xp + offset, iflag_aypx);
+    }
+  }
+}
+
+void BridgeQXS::mult_clover_eo_2_cswinv_dirac_chrot(
+    real_t *v2, real_t *v1_tmp, real_t *up, real_t *ct, real_t *v1, real_t *xp,
+    real_t *buf_xp, real_t *buf_xm, real_t *buf_yp, real_t *buf_ym,
+    real_t *buf_zp, real_t *buf_zm, real_t *buf_tp, real_t *buf_tm,
+    real_t kappa, int *bc, int *Nsize, int *do_comm, int *Leo, const int ieo,
+    const int iflag_aypx)
+{
+  mult_clover_eo_2_cswinv_dirac_chrot_impl<false>(v2, v1_tmp, up, ct, v1, xp, buf_xp, buf_xm,
+      buf_yp, buf_ym, buf_zp, buf_zm, buf_tp, buf_tm, kappa, bc, Nsize, do_comm, Leo, ieo,
+      iflag_aypx);
+}
+
+void BridgeQXS::mult_clover_eo_2_cswinv_recon12_dirac_chrot(
+    real_t *v2, real_t *v1_tmp, real_t *up, real_t *ct, real_t *v1, real_t *xp,
+    real_t *buf_xp, real_t *buf_xm, real_t *buf_yp, real_t *buf_ym,
+    real_t *buf_zp, real_t *buf_zm, real_t *buf_tp, real_t *buf_tm,
+    real_t kappa, int *bc, int *Nsize, int *do_comm, int *Leo, const int ieo,
+    const int iflag_aypx)
+{
+  mult_clover_eo_2_cswinv_dirac_chrot_impl<true>(v2, v1_tmp, up, ct, v1, xp, buf_xp, buf_xm,
+      buf_yp, buf_ym, buf_zp, buf_zm, buf_tp, buf_tm, kappa, bc, Nsize, do_comm, Leo, ieo,
+      iflag_aypx);
+}
+
+#endif
+
 //============================================================END=====
 #endif

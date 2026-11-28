@@ -66,7 +66,7 @@ class Smear_APE : public Smear
   { init(params); }
 
   //! Deconstructor
-  ~Smear_APE() {}
+  ~Smear_APE() { tidyup(); }
 
   //! Setting parameters with Parameters object.
   void set_parameters(const Parameters& params);

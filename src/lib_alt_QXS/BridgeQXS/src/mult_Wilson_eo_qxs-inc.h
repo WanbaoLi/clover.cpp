@@ -12,211 +12,21 @@
 
 #include "mult_common_th-inc.h"
 
-//#define IMPLE  0   // 0: original, 1: Nitadori-san's
-#define IMPLE    1 // 0: original, 1: Nitadori-san's
-//#define IMPLE  2   // setting of predicate/index only once
+#include "mult_Wilson_eo_bulk_qxs-inc.h"
+
+#define IMPLE 2
 
 //====================================================================
-void BridgeQXS::mult_wilson_eo_bulk_dirac(real_t *v2, real_t *up,
-                                          real_t *v1, real_t *xp,
-                                          real_t kappa, int *bc,
-                                          int *Nsize, int *do_comm,
-                                          int *Leo, const int ieo,
-                                          const int iflag)
+template<bool Recon>
+static void mult_wilson_eo_bulk_dirac_impl(real_t *v2, real_t *up,
+                                           real_t *v1, real_t *xp,
+                                           real_t kappa, int *bc,
+                                           int *Nsize, int *do_comm,
+                                           int *Leo, const int ieo,
+                                           const int iflag)
 {
-  int Nx2v = Nsize[0];
-  int Ny   = Nsize[1];
-  int Nz   = Nsize[2];
-  int Nt   = Nsize[3];
-
-  int Nst2v = Nx2v * Ny * Nz * Nt;
-  int Nst2  = Nst2v * VLEN;
-
-  int Nxy2  = Nx2v * Ny;
-  int Nxyz2 = Nx2v * Ny * Nz;
-
-  svbool_t pg1e_xp, pg2e_xp, pg3e_xp, pg1e_xm, pg2e_xm, pg3e_xm;
-  svbool_t pg1o_xp, pg2o_xp, pg3o_xp, pg1o_xm, pg2o_xm, pg3o_xm;
-  svbool_t pg1_yp, pg2_yp, pg1_ym, pg2_ym;
-
-#if IMPLE == 0
-  // original
-  set_predicate_xp_eo(pg1e_xp, pg2e_xp, pg3e_xp, 0);
-  set_predicate_xp_eo(pg1o_xp, pg2o_xp, pg3o_xp, 1);
-  set_predicate_xm_eo(pg1e_xm, pg2e_xm, pg3e_xm, 0);
-  set_predicate_xm_eo(pg1o_xm, pg2o_xm, pg3o_xm, 1);
-  set_predicate_yp(pg1_yp, pg2_yp);
-  set_predicate_ym(pg1_ym, pg2_ym);
-#else
-  // nitadori-san
-  svuint_t idx1e_xp, idx1o_xp, idx1e_xm, idx1o_xm;
-  svuint_t idx1_yp, idx1_ym;
-  set_idx_predicate_xp_eo(pg1e_xp, idx1e_xp, 0);
-  set_idx_predicate_xp_eo(pg1o_xp, idx1o_xp, 1);
-  set_idx_predicate_xm_eo(pg1e_xm, idx1e_xm, 0);
-  set_idx_predicate_xm_eo(pg1o_xm, idx1o_xm, 1);
-  set_idx_predicate_yp(pg1_yp, idx1_yp);
-  set_idx_predicate_ym(pg1_ym, idx1_ym);
-#endif
-
-  int ith, nth, is, ns;
-  set_threadtask(ith, nth, is, ns, Nst2v);
-
-  for (int site = is; site < ns; ++site) {
-    int ix   = site % Nx2v;
-    int iyzt = site / Nx2v;
-    int iy   = iyzt % Ny;
-    int izt  = site / Nxy2;
-    int iz   = izt % Nz;
-    int it   = izt / Nz;
-    int ixy  = ix + Nx2v * iy;
-    int ixyz = ixy + Nxy2 * iz;
-    int jeo  = (ieo + Leo[VLENY * iyzt]) % 2;
-
-    Vsimd_t v2v[NVCD];
-    clear_vec(v2v, NVCD);
-
-    real_t zL[VLEN * NVCD], uL[VLEN * NDF];
-
-    if ((ix < Nx2v - 1) || (do_comm[0] == 0)) {
-      int nei = ix + 1 + Nx2v * iyzt;
-      if (ix == Nx2v - 1) nei = 0 + Nx2v * iyzt;
-      real_t *u = &up[NDF * Nst2 * (ieo + 2 * 0)];
-
-      if (jeo == 0) {
-#if IMPLE == 0
-        // original
-        mult_wilson_eo_xpb(pg1e_xp, pg2e_xp, pg3e_xp,
-                           v2v, &u[VLEN * NDF * site],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#else
-        // nitadori-san
-#if IMPLE < 2
-        set_idx_predicate_xp_eo(pg1e_xp, idx1e_xp, 0);
-#endif
-        mult_wilson_eo_xpb(pg1e_xp, idx1e_xp,
-                           v2v, &u[VLEN * NDF * site],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#endif
-      } else {
-#if IMPLE == 0
-        // original
-        mult_wilson_eo_xpb(pg1o_xp, pg2o_xp, pg3o_xp,
-                           v2v, &u[VLEN * NDF * site],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#else
-        // nitadori-san
-#if IMPLE < 2
-        set_idx_predicate_xp_eo(pg1o_xp, idx1o_xp, 1);
-#endif
-        mult_wilson_eo_xpb(pg1o_xp, idx1o_xp,
-                           v2v, &u[VLEN * NDF * site],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#endif
-      }
-    }
-
-    if ((ix > 0) || (do_comm[0] == 0)) {
-      int nei = ix - 1 + Nx2v * iyzt;
-      if (ix == 0) nei = Nx2v - 1 + Nx2v * iyzt;
-      real_t *u = &up[NDF * Nst2 * (1 - ieo + 2 * 0)];
-      if (jeo == 0) {
-#if IMPLE == 0
-        // original
-        mult_wilson_eo_xmb(pg1e_xm, pg2e_xm, pg3e_xm, v2v,
-                           &u[VLEN * NDF * site], &u[VLEN * NDF * nei],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#else
-        // nitadori-san
-#if IMPLE < 2
-        set_idx_predicate_xm_eo(pg1e_xm, idx1e_xm, 0);
-#endif
-        mult_wilson_eo_xmb(pg1e_xm, idx1e_xm, v2v,
-                           &u[VLEN * NDF * site], &u[VLEN * NDF * nei],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#endif
-      } else {
-#if IMPLE == 0
-        // original
-        mult_wilson_eo_xmb(pg1o_xm, pg2o_xm, pg3o_xm, v2v,
-                           &u[VLEN * NDF * site], &u[VLEN * NDF * nei],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#else
-        // nitadori-san
-#if IMPLE < 2
-        set_idx_predicate_xm_eo(pg1o_xm, idx1o_xm, 1);
-#endif
-        mult_wilson_eo_xmb(pg1o_xm, idx1o_xm, v2v,
-                           &u[VLEN * NDF * site], &u[VLEN * NDF * nei],
-                           &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#endif
-      }
-    }
-
-    if ((iy < Ny - 1) || (do_comm[1] == 0)) {
-      int    iy2 = (iy + 1) % Ny;
-      int    nei = ix + Nx2v * (iy2 + Ny * izt);
-      real_t *u  = &up[NDF * Nst2 * (ieo + 2 * 1)];
-#if IMPLE == 0
-      mult_wilson_ypb(pg1_yp, pg2_yp, v2v,
-                      &u[VLEN * NDF * site],
-                      &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#else
-#if IMPLE < 2
-      set_idx_predicate_yp(pg1_yp, idx1_yp);
-#endif
-      mult_wilson_ypb(pg1_yp, idx1_yp, v2v,
-                      &u[VLEN * NDF * site],
-                      &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#endif
-    }
-
-    if ((iy > 0) || (do_comm[1] == 0)) {
-      int    iy2 = (iy - 1 + Ny) % Ny;
-      int    nei = ix + Nx2v * (iy2 + Ny * izt);
-      real_t *u  = &up[NDF * Nst2 * (1 - ieo + 2 * 1)];
-#if IMPLE == 0
-      mult_wilson_ymb(pg1_ym, pg2_ym, v2v,
-                      &u[VLEN * NDF * site], &u[VLEN * NDF * nei],
-                      &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#else
-#if IMPLE < 2
-      set_idx_predicate_ym(pg1_ym, idx1_ym);
-#endif
-      mult_wilson_ymb(pg1_ym, idx1_ym, v2v,
-                      &u[VLEN * NDF * site], &u[VLEN * NDF * nei],
-                      &v1[VLEN * NVCD * site], &v1[VLEN * NVCD * nei]);
-#endif
-    }
-
-    if ((iz < Nz - 1) || (do_comm[2] == 0)) {
-      int    iz2 = (iz + 1) % Nz;
-      int    nei = ixy + Nxy2 * (iz2 + Nz * it);
-      real_t *u  = &up[NDF * Nst2 * (ieo + 2 * 2)];
-      mult_wilson_zpb(v2v, &u[VLEN * NDF * site], &v1[VLEN * NVCD * nei]);
-    }
-
-    if ((iz > 0) || (do_comm[2] == 0)) {
-      int    iz2 = (iz - 1 + Nz) % Nz;
-      int    nei = ixy + Nxy2 * (iz2 + Nz * it);
-      real_t *u  = &up[NDF * Nst2 * (1 - ieo + 2 * 2)];
-      mult_wilson_zmb(v2v, &u[VLEN * NDF * nei], &v1[VLEN * NVCD * nei]);
-    }
-
-    if ((it < Nt - 1) || (do_comm[3] == 0)) {
-      int    it2 = (it + 1) % Nt;
-      int    nei = ixyz + Nxyz2 * it2;
-      real_t *u  = &up[NDF * Nst2 * (ieo + 2 * 3)];
-      mult_wilson_tpb_dirac(v2v, &u[VLEN * NDF * site], &v1[VLEN * NVCD * nei]);
-    }
-
-    if ((it > 0) || (do_comm[3] == 0)) {
-      int    it2 = (it - 1 + Nt) % Nt;
-      int    nei = ixyz + Nxyz2 * it2;
-      real_t *u  = &up[NDF * Nst2 * (1 - ieo + 2 * 3)];
-      mult_wilson_tmb_dirac(v2v, &u[VLEN * NDF * nei], &v1[VLEN * NVCD * nei]);
-    }
-
+  wilson_eo_bulk<Recon>(up, v1, nullptr, Nsize, do_comm, Leo, ieo, bc,
+                 [&](int site, int, int, int, int, Vsimd_t *v2v) {
     svbool_t pg = set_predicate();
     if (iflag == 0) {
       real_t *vv2 = &v2[VLEN * NVCD * site];
@@ -230,18 +40,41 @@ void BridgeQXS::mult_wilson_eo_bulk_dirac(real_t *v2, real_t *up,
       mult_wilson_aypx_save(&v2[VLEN * NVCD * site],
                             kappa, v2v, &xp[VLEN * NVCD * site]);
     }
-  }
+  });
+}
+
+void BridgeQXS::mult_wilson_eo_bulk_dirac(real_t *v2, real_t *up,
+                                          real_t *v1, real_t *xp,
+                                          real_t kappa, int *bc,
+                                          int *Nsize, int *do_comm,
+                                          int *Leo, const int ieo,
+                                          const int iflag)
+{
+  mult_wilson_eo_bulk_dirac_impl<false>(v2, up, v1, xp, kappa, bc, Nsize, do_comm, Leo, ieo,
+      iflag);
+}
+
+void BridgeQXS::mult_wilson_eo_bulk_recon12_dirac(real_t *v2, real_t *up,
+                                                  real_t *v1, real_t *xp,
+                                                  real_t kappa, int *bc,
+                                                  int *Nsize, int *do_comm,
+                                                  int *Leo, const int ieo,
+                                                  const int iflag)
+{
+  mult_wilson_eo_bulk_dirac_impl<true>(v2, up, v1, xp, kappa, bc, Nsize, do_comm, Leo, ieo,
+      iflag);
 }
 
 
 //====================================================================
-void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
-                                       real_t *buf_yp, real_t *buf_ym,
-                                       real_t *buf_zp, real_t *buf_zm,
-                                       real_t *buf_tp, real_t *buf_tm,
-                                       real_t *up, real_t *v1, int *bc,
-                                       int *Nsize, int *do_comm, int *Leo,
-                                       const int ieo, const int iflag)
+template<bool Recon>
+static void mult_wilson_eo_1_dirac_impl(real_t *buf_xp, real_t *buf_xm,
+                                        real_t *buf_yp, real_t *buf_ym,
+                                        real_t *buf_zp, real_t *buf_zm,
+                                        real_t *buf_tp, real_t *buf_tm,
+                                        real_t *up, real_t *v1, int *bc,
+                                        int *Nsize, int *do_comm, int *Leo,
+                                        const int ieo, const int iflag)
 {
   int Nx2v = Nsize[0];
   int Ny   = Nsize[1];
@@ -249,7 +82,7 @@ void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
   int Nt   = Nsize[3];
 
   int Nst2v = Nx2v * Ny * Nz * Nt;
-  int Nst2  = Nst2v * VLEN;
+  const EoGauge<Recon> gauge = {up, Nst2v, Nsize, bc, Leo};
 
   int Nxy2  = Nx2v * Ny;
   int Nxyz2 = Nx2v * Ny * Nz;
@@ -316,26 +149,26 @@ void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
         int    ix     = Nx2v - 1;
         int    site   = ix + Nx2v * iyzt;
         int    ibf_dn = Nskipx * NVC * ND2 * iyzt;
-        real_t *u     = &up[NDF * Nst2 * (1 - ieo + 2 * idir)];
+        const int block = 1 - ieo + 2 * idir;
         if (jeo == 0) {
           if (VLENY == 1) ibf_dn = Nskipx * NVC * ND2 * (iyzt / 2);
 #if IMPLE == 0
           set_index_xp_eo(svidx_xp);
           mult_wilson_eo_xm1(pg2o_xp, svidx_xp, &buf_xm[ibf_dn],
-                             &u[VLEN * NDF * site], &v1[VLEN * NVCD * site]);
+                             gauge.link(block, site), &v1[VLEN * NVCD * site]);
 #else
           mult_wilson_eo_xm1(pg2o_xp, &buf_xm[ibf_dn],
-                             &u[VLEN * NDF * site], &v1[VLEN * NVCD * site]);
+                             gauge.link(block, site), &v1[VLEN * NVCD * site]);
 #endif
         } else {
 #if VLENY > 1
 #if IMPLE == 0
           set_index_xp_eo(svidx_xp);
           mult_wilson_eo_xm1(pg2e_xp, svidx_xp, &buf_xm[ibf_dn],
-                             &u[VLEN * NDF * site], &v1[VLEN * NVCD * site]);
+                             gauge.link(block, site), &v1[VLEN * NVCD * site]);
 #else
           mult_wilson_eo_xm1(pg2e_xp, &buf_xm[ibf_dn],
-                             &u[VLEN * NDF * site], &v1[VLEN * NVCD * site]);
+                             gauge.link(block, site), &v1[VLEN * NVCD * site]);
 #endif
 #endif
         }
@@ -364,10 +197,10 @@ void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
       {
         int    iy   = Ny - 1;
         int    site = ix + Nx2v * (iy + Ny * izt);
-        real_t *u   = &up[NDF * Nst2 * ((1 - ieo) + 2 * idir)];
+        const int block = (1 - ieo) + 2 * idir;
         int    ibf  = VLENX * NVC * ND2 * (ix + Nx2v * izt);
         mult_wilson_ym1(pg2_yp,
-                        &buf_ym[ibf], &u[VLEN * NDF * site],
+                        &buf_ym[ibf], gauge.link(block, site),
                         &v1[VLEN * NVCD * site]);
       }
     }
@@ -393,8 +226,8 @@ void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
         int    iz   = Nz - 1;
         int    site = ixy + Nxy2 * (iz + Nz * it);
         int    ibf  = VLEN * NVC * ND2 * (ixy + Nxy2 * it);
-        real_t *u   = &up[NDF * Nst2 * (1 - ieo + 2 * idir)];
-        mult_wilson_zm1(&buf_zm[ibf], &u[VLEN * NDF * site],
+        const int block = 1 - ieo + 2 * idir;
+        mult_wilson_zm1(&buf_zm[ibf], gauge.link(block, site),
                         &v1[VLEN * NVCD * site]);
       }
     }
@@ -416,25 +249,50 @@ void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
       {
         int    it   = Nt - 1;
         int    site = ixyz + Nxyz2 * it;
-        real_t *u   = &up[NDF * Nst2 * (1 - ieo + 2 * idir)];
+        const int block = 1 - ieo + 2 * idir;
         mult_wilson_tm1_dirac(&buf_tm[VLEN * NVC * ND2 * ixyz],
-                              &u[VLEN * NDF * site], &v1[VLEN * NVCD * site]);
+                              gauge.link(block, site), &v1[VLEN * NVCD * site]);
       }
     }
   }
 }
 
-
-//====================================================================
-void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
-                                       real_t *xp,
-                                       real_t *buf_xp, real_t *buf_xm,
+void BridgeQXS::mult_wilson_eo_1_dirac(real_t *buf_xp, real_t *buf_xm,
                                        real_t *buf_yp, real_t *buf_ym,
                                        real_t *buf_zp, real_t *buf_zm,
                                        real_t *buf_tp, real_t *buf_tm,
-                                       real_t kappa, int *bc,
+                                       real_t *up, real_t *v1, int *bc,
                                        int *Nsize, int *do_comm, int *Leo,
                                        const int ieo, const int iflag)
+{
+  mult_wilson_eo_1_dirac_impl<false>(buf_xp, buf_xm, buf_yp, buf_ym, buf_zp, buf_zm, buf_tp,
+      buf_tm, up, v1, bc, Nsize, do_comm, Leo, ieo, iflag);
+}
+
+void BridgeQXS::mult_wilson_eo_1_recon12_dirac(real_t *buf_xp, real_t *buf_xm,
+                                               real_t *buf_yp, real_t *buf_ym,
+                                               real_t *buf_zp, real_t *buf_zm,
+                                               real_t *buf_tp, real_t *buf_tm,
+                                               real_t *up, real_t *v1, int *bc,
+                                               int *Nsize, int *do_comm, int *Leo,
+                                               const int ieo, const int iflag)
+{
+  mult_wilson_eo_1_dirac_impl<true>(buf_xp, buf_xm, buf_yp, buf_ym, buf_zp, buf_zm, buf_tp,
+      buf_tm, up, v1, bc, Nsize, do_comm, Leo, ieo, iflag);
+}
+
+
+//====================================================================
+template<bool Recon>
+static void mult_wilson_eo_2_dirac_impl(real_t *v2, real_t *up, real_t *v1,
+                                        real_t *xp,
+                                        real_t *buf_xp, real_t *buf_xm,
+                                        real_t *buf_yp, real_t *buf_ym,
+                                        real_t *buf_zp, real_t *buf_zm,
+                                        real_t *buf_tp, real_t *buf_tm,
+                                        real_t kappa, int *bc,
+                                        int *Nsize, int *do_comm, int *Leo,
+                                        const int ieo, const int iflag)
 {
   int Nx2v = Nsize[0];
   int Ny   = Nsize[1];
@@ -442,7 +300,7 @@ void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
   int Nt   = Nsize[3];
 
   int Nst2v = Nx2v * Ny * Nz * Nt;
-  int Nst2  = Nst2v * VLEN;
+  const EoGauge<Recon> gauge = {up, Nst2v, Nsize, bc, Leo};
 
   int Nxy2  = Nx2v * Ny;
   int Nxyz2 = Nx2v * Ny * Nz;
@@ -482,6 +340,7 @@ void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
     int izt  = site / Nxy2;
     int iz   = izt % Nz;
     int it   = izt / Nz;
+    if (!eo_halo_site(ix, iy, iz, it, Nsize, do_comm)) continue;
     int ixy  = ix + Nx2v * iy;
     int ixyz = ixy + Nxy2 * iz;
     int jeo  = (ieo + Leo[VLENY * iyzt]) % 2;
@@ -494,16 +353,14 @@ void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
     if ((ix == Nx2v - 1) && (do_comm[0] > 0)) {
       int ibf_up = Nskipx * NVC * ND2 * iyzt;
       if (VLENY == 1) ibf_up = Nskipx * NVC * ND2 * (iyzt / 2);
-      real_t *u = &up[NDF * Nst2 * (ieo + 2 * 0)];
+      const int block = ieo + 2 * 0;
       if (jeo == 0) {
-        set_index_xp_eo(svidx_xp);
         mult_wilson_eo_xp2(pg1e_xp, pg2e_xp, pg3e_xp, svidx_xp,
-                           v2v, &u[VLEN * NDF * site],
+                           v2v, gauge.link(block, site),
                            &v1[VLEN * NVCD * site], &buf_xp[ibf_up]);
       } else {
-        set_index_xp_eo(svidx_xp);
         mult_wilson_eo_xp2(pg1o_xp, pg2o_xp, pg3o_xp, svidx_xp,
-                           v2v, &u[VLEN * NDF * site],
+                           v2v, gauge.link(block, site),
                            &v1[VLEN * NVCD * site], &buf_xp[ibf_up]);
       }
     }
@@ -511,40 +368,38 @@ void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
     if ((ix == 0) && (do_comm[0] > 0)) {
       int ibf_dn = Nskipx * NVC * ND2 * iyzt;
       if (VLENY == 1) ibf_dn = Nskipx * NVC * ND2 * (iyzt / 2);
-      real_t *u = &up[NDF * Nst2 * (1 - ieo + 2 * 0)];
+      const int block = 1 - ieo + 2 * 0;
       if (jeo == 0) {
-        set_index_xm_eo(svidx_xm);
         mult_wilson_eo_xm2(pg1e_xm, pg2e_xm, pg3e_xm, svidx_xm,
-                           v2v, &u[VLEN * NDF * site],
+                           v2v, gauge.link(block, site),
                            &v1[VLEN * NVCD * site], &buf_xm[ibf_dn]);
       } else {
-        set_index_xm_eo(svidx_xm);
         mult_wilson_eo_xm2(pg1o_xm, pg2o_xm, pg3o_xm, svidx_xm,
-                           v2v, &u[VLEN * NDF * site],
+                           v2v, gauge.link(block, site),
                            &v1[VLEN * NVCD * site], &buf_xm[ibf_dn]);
       }
     }
 
     if ((iy == Ny - 1) && (do_comm[1] > 0)) {
       int    ibf = VLENX * NVC * ND2 * (ix + Nx2v * izt);
-      real_t *u  = &up[NDF * Nst2 * (ieo + 2 * 1)];
+      const int block = ieo + 2 * 1;
       mult_wilson_yp2(pg1_yp, pg2_yp,
-                      v2v, &u[VLEN * NDF * site],
+                      v2v, gauge.link(block, site),
                       &v1[VLEN * NVCD * site], &buf_yp[ibf]);
     }
 
     if ((iy == 0) && (do_comm[1] > 0)) {
       int    ibf = VLENX * NVC * ND2 * (ix + Nx2v * izt);
-      real_t *u  = &up[NDF * Nst2 * (1 - ieo + 2 * 1)];
+      const int block = 1 - ieo + 2 * 1;
       mult_wilson_ym2(pg1_ym, pg2_ym,
-                      v2v, &u[VLEN * NDF * site],
+                      v2v, gauge.link(block, site),
                       &v1[VLEN * NVCD * site], &buf_ym[ibf]);
     }
 
     if ((iz == Nz - 1) && (do_comm[2] > 0)) {
       int    ibf = VLEN * NVC * ND2 * (ixy + Nxy2 * it);
-      real_t *u  = &up[NDF * Nst2 * (ieo + 2 * 2)];
-      mult_wilson_zp2(v2v, &u[VLEN * NDF * site], &buf_zp[ibf]);
+      const int block = ieo + 2 * 2;
+      mult_wilson_zp2(v2v, gauge.link(block, site), &buf_zp[ibf]);
     }
 
     if ((iz == 0) && (do_comm[2] > 0)) {
@@ -553,8 +408,8 @@ void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
     }
 
     if ((it == Nt - 1) && (do_comm[3] > 0)) {
-      real_t *u = &up[NDF * Nst2 * (ieo + 2 * 3)];
-      mult_wilson_tp2_dirac(v2v, &u[VLEN * NDF * site],
+      const int block = ieo + 2 * 3;
+      mult_wilson_tp2_dirac(v2v, gauge.link(block, site),
                             &buf_tp[VLEN * NVC * ND2 * ixyz]);
     }
 
@@ -611,6 +466,35 @@ void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
     }
   }
 }
+
+void BridgeQXS::mult_wilson_eo_2_dirac(real_t *v2, real_t *up, real_t *v1,
+                                       real_t *xp,
+                                       real_t *buf_xp, real_t *buf_xm,
+                                       real_t *buf_yp, real_t *buf_ym,
+                                       real_t *buf_zp, real_t *buf_zm,
+                                       real_t *buf_tp, real_t *buf_tm,
+                                       real_t kappa, int *bc,
+                                       int *Nsize, int *do_comm, int *Leo,
+                                       const int ieo, const int iflag)
+{
+  mult_wilson_eo_2_dirac_impl<false>(v2, up, v1, xp, buf_xp, buf_xm, buf_yp, buf_ym, buf_zp,
+      buf_zm, buf_tp, buf_tm, kappa, bc, Nsize, do_comm, Leo, ieo, iflag);
+}
+
+void BridgeQXS::mult_wilson_eo_2_recon12_dirac(real_t *v2, real_t *up, real_t *v1,
+                                               real_t *xp,
+                                               real_t *buf_xp, real_t *buf_xm,
+                                               real_t *buf_yp, real_t *buf_ym,
+                                               real_t *buf_zp, real_t *buf_zm,
+                                               real_t *buf_tp, real_t *buf_tm,
+                                               real_t kappa, int *bc,
+                                               int *Nsize, int *do_comm, int *Leo,
+                                               const int ieo, const int iflag)
+{
+  mult_wilson_eo_2_dirac_impl<true>(v2, up, v1, xp, buf_xp, buf_xm, buf_yp, buf_ym, buf_zp,
+      buf_zm, buf_tp, buf_tm, kappa, bc, Nsize, do_comm, Leo, ieo, iflag);
+}
+
 
 
 #endif

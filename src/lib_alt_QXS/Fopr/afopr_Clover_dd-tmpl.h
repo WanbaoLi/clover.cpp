@@ -262,15 +262,6 @@ void AFopr_Clover_dd<AFIELD>::set_parameters(
   }
 #pragma omp barrier
 
-  if ((m_block_sizev[0] * VLENX != m_block_size[0]) ||
-      (m_block_sizev[1] * VLENY != m_block_size[1])) {
-    vout.crucial(m_vl, "%s: bad blocksize in XY: must be divided by"
-                       " VLENX=%d, VLENY=%d but are %d, %d\n",
-                 class_name.c_str(), VLENX, VLENY,
-                 m_block_size[0], m_block_size[1]);
-    exit(EXIT_FAILURE);
-  }
-
   if (ith == 0) {
     int NBx  = m_Nx / m_block_size[0];
     int NBy  = m_Ny / m_block_size[1];
@@ -977,6 +968,26 @@ template<typename AFIELD>
 void AFopr_Clover_dd<AFIELD>::mult_sap(AFIELD& v, const AFIELD& w,
                                        const int ieo)
 {
+  if (m_block_size[0] % VLENX || m_block_size[1] % VLENY) {
+    // Internal interfaces have zero links in m_Ublock. A whole-domain DD
+    // multiply therefore gives D restricted to every SAP block at once.
+    mult_dd(m_v2,w);
+    int tid, nth, begin, end;
+    set_threadtask_mult(tid,nth,begin,end,m_Nst);
+    AIndex_lex<real_t,AFIELD::IMPL> index;
+    for (int site=begin; site<end; ++site) {
+      int x=site % m_Nx, y=(site/m_Nx) % m_Ny;
+      int z=(site/(m_Nx*m_Ny)) % m_Nz, t=site/(m_Nx*m_Ny*m_Nz);
+      if ((x/m_block_size[0]+y/m_block_size[1]+z/m_block_size[2]+t/m_block_size[3]+m_Ieo)%2 != ieo)
+        continue;
+      for (int k=0; k<v.nin(); ++k) {
+        int i=index.idx(k,v.nin(),site,0);
+        v.set(i,m_v2.cmp(i));
+      }
+    }
+#pragma omp barrier
+    return;
+  }
   real_t *v2 = v.ptr(0);
   real_t *v1 = const_cast<AFIELD *>(&w)->ptr(0);
   real_t *up = m_Ublock.ptr(0);
@@ -1007,6 +1018,8 @@ void AFopr_Clover_dd<AFIELD>::mult_sap(AFIELD& v, const AFIELD& w,
 template<typename AFIELD>
 void AFopr_Clover_dd<AFIELD>::mult_dd(AFIELD& v, const AFIELD& w)
 {
+  const bool partial = m_block_size[0] % VLENX || m_block_size[1] % VLENY;
+  int* kernel_blocks = partial ? m_Nsize : m_block_sizev;
   real_t *v2 = v.ptr(0);
   real_t *v1 = const_cast<AFIELD *>(&w)->ptr(0);
   real_t *up = m_Ublock.ptr(0);
@@ -1018,11 +1031,11 @@ void AFopr_Clover_dd<AFIELD>::mult_dd(AFIELD& v, const AFIELD& w)
   BridgeQXS::mult_clover_dd_dirac_chrot(
     v2, up, ct, v1,
     m_CKs, &m_boundary[0],
-    m_Nsize, m_block_sizev, -1);
+    m_Nsize, kernel_blocks, -1);
 #else
   BridgeQXS::mult_clover_dd_dirac(v2, up, ct, v1,
                                   m_CKs, &m_boundary[0],
-                                  m_Nsize, m_block_sizev, -1);
+                                  m_Nsize, kernel_blocks, -1);
 #endif
 
   // vector varialbes at the boundary of the domain are not treated here...

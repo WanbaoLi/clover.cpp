@@ -62,6 +62,8 @@ class ForceSmear_APE : public ForceSmear
     : m_proj(proj)
   { init(params); }
 
+  ~ForceSmear_APE() { tidyup(); }
+
   // Setting parameters with Parameters object.
   void set_parameters(const Parameters& params);
 

@@ -1,0 +1,110 @@
+{
+  "trajectory": "24^3 x 64, cfg3000 -> 3001",
+  "upstream_chroma_revision": "a7c70c66528fd76c2648911622405d351e5782cf",
+  "source_tree_sha256": {
+    "lib/update/molecdyn/hmc/abs_hmc.h": "f3a43745c1ffbd934a7fd958669cf6e84f908bff1491f77b75f334f1bba0fde0",
+    "lib/update/molecdyn/hamiltonian/exact_hamiltonian.h": "10bbf7ff7aea06005088dafe88b5bfd5995f9d45d9831d4a71552bb5432e0453",
+    "lib/update/molecdyn/hamiltonian/exact_hamiltonian.cc": "7a2011e62fe5cb982a9cf8e5d51a16311b2dd9627116e5e8c798c8a08070fc43"
+  },
+  "original_chroma_fields": {
+    "monomial_order": [
+      "logdet_2flav",
+      "logdet_1flav",
+      "rat_3strange",
+      "has0",
+      "has1",
+      "has2",
+      "has3",
+      "has4",
+      "has_cancel_2flav",
+      "lw_tree_gauge"
+    ],
+    "initial_monomials": [
+      -27745033.983814046,
+      -13984860.970629329,
+      -3090.525102184514,
+      5312714.920625705,
+      5307591.27394679,
+      5305525.194114609,
+      5305732.692637805,
+      5308934.76271032,
+      -3853.438178752631,
+      -16297412.602183664
+    ],
+    "final_monomials": [
+      -27745108.312673263,
+      -13984897.34044475,
+      -2962.4950823854224,
+      5312708.01745911,
+      5307586.950742146,
+      5305521.272088908,
+      5305733.014880479,
+      5308936.456748933,
+      -3815.0963902303015,
+      -16303211.094152598
+    ],
+    "initial_kinetic": 1110.7559910661796,
+    "initial_potential": -31493752.675872736,
+    "final_kinetic": 6867.234266423408,
+    "final_potential": -31499508.626823653,
+    "delta_h": 0.5273244403724675
+  },
+  "package_regression": {
+    "passed": true,
+    "production_scalar_replay": {
+      "inputs": "same original four Chroma energy scalars, same twenty original monomials",
+      "initial_potential": -31493752.675872736,
+      "final_potential": -31499508.626823653,
+      "delta_kinetic": 5756.478275357229,
+      "delta_potential": -5755.9509509168565,
+      "reported_delta_h": 0.5273244403724675,
+      "separate_differences_delta_h": 0.5273244403724675,
+      "total_difference": 0.5273244380950928,
+      "separate_bits": "3fe0dfd781390000",
+      "reported_bits": "3fe0dfd781390000",
+      "total_difference_bits": "3fe0dfd780000000",
+      "direct_formula_absolute_difference": 2.2773747332394123e-09,
+      "legacy_CPU_H0_ulp": 7.450580596923828e-09,
+      "closest_legacy_value_distance": 2.2773747332394123e-09
+    },
+    "real_kinetic_fields": {
+      "ARM_initial": {
+        "complex_components": 31850496,
+        "chroma_reference": 1110.7559910661796,
+        "centered_link_reduction": 1110.7559910661644,
+        "centered_link_absolute_error": 1.5234036254696548e-11,
+        "legacy_absolute_error": 8.384952252527e-07
+      },
+      "Chroma_final": {
+        "complex_components": 31850496,
+        "chroma_reference": 6867.234266423408,
+        "centered_link_reduction": 6867.234266423431,
+        "centered_link_absolute_error": 2.2737367544323206e-11
+      }
+    },
+    "small_archived_restart": {
+      "lattice": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "update": 3001,
+      "reference_rule": {
+        "initial_potential": -12145.71894380619,
+        "final_potential": -10632.82848435455,
+        "delta_kinetic": -1512.8903679648613,
+        "delta_potential": 1512.8904594516407,
+        "delta_h": 9.148677941084316e-05
+      },
+      "legacy_delta_h": 9.148679600912146e-05,
+      "same_proposal_bitwise": true,
+      "same_selected_field_bitwise": true,
+      "same_rng": true,
+      "same_decision": true,
+      "decision": true,
+      "uniform": 0.48597490787506104,
+      "old_checkpoint_resumed_with_current_package_and_all_metadata_exact": true
+    }
+  }
+}

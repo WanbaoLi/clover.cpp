@@ -16,6 +16,7 @@
 #include "lib/ResourceManager/threadManager.h"
 
 #include "lib_alt_QXS/inline/afield_th-inc.h"
+#include "lib_alt_QXS/Field/afield_dd_partial-inc.h"
 
 
 
@@ -34,6 +35,22 @@ void block_dotc_eo(typename AFIELD::complex_t *out,
                    const AFIELD& v, const AFIELD& w,
                    const int ieo, const INDEX& block_index)
 {
+  if (partial_xy_block(block_index)) {
+    using Real = typename AFIELD::real_t;
+    const Real *vp = const_cast<AFIELD&>(v).ptr(0);
+    const Real *wp = const_cast<AFIELD&>(w).ptr(0);
+    for_partial_blocks(block_index, [&](int block) {
+      Real re=0, im=0;
+      if (block_index.block_eo(block) != 1-ieo)
+        for_block_components(block_index, v, block, [&](int ir, int ii) {
+          re += vp[ir]*wp[ir] + vp[ii]*wp[ii];
+          im += vp[ir]*wp[ii] - vp[ii]*wp[ir];
+        });
+      out[block] = cmplx(re,im);
+    });
+    return;
+  }
+
   typedef typename AFIELD::real_t      real_t;
   typedef typename AFIELD::complex_t   complex_t;
 
@@ -142,6 +159,20 @@ void block_norm2_eo(typename AFIELD::real_t *out,
                     const AFIELD& v, const int ieo,
                     const INDEX& block_index)
 {
+  if (partial_xy_block(block_index)) {
+    using Real = typename AFIELD::real_t;
+    const Real *vp = const_cast<AFIELD&>(v).ptr(0);
+    for_partial_blocks(block_index, [&](int block) {
+      if (block_index.block_eo(block) == 1-ieo) return;
+      Real n=0;
+      for_block_components(block_index, v, block, [&](int ir, int ii) {
+        n += vp[ir]*vp[ir] + vp[ii]*vp[ii];
+      });
+      out[block] = n;
+    });
+    return;
+  }
+
   typedef typename AFIELD::real_t real_t;
 
   real_t *vp = const_cast<AFIELD *>(&v)->ptr(0);
@@ -230,6 +261,11 @@ template<typename INDEX, typename AFIELD>
 void block_scal_eo(AFIELD& v, const typename AFIELD::real_t *a,
                    const int ieo, const INDEX& block_index)
 {
+  if (partial_xy_block(block_index)) {
+    update_partial_blocks(v,a,v,ieo,1,block_index,false);
+    return;
+  }
+
   typedef typename AFIELD::real_t real_t;
 
   real_t *vp = v.ptr(0);
@@ -308,6 +344,11 @@ template<typename INDEX, typename AFIELD>
 void block_scal_eo(AFIELD& v, const typename AFIELD::complex_t *a,
                    const int ieo, const INDEX& block_index)
 {
+  if (partial_xy_block(block_index)) {
+    update_partial_blocks(v,a,v,ieo,1,block_index,false);
+    return;
+  }
+
   typedef typename AFIELD::real_t    real_t;
   typedef typename AFIELD::complex_t complex_t;
 
@@ -400,6 +441,11 @@ void block_axpy_eo(AFIELD& v, const typename AFIELD::real_t *a,
                    const typename AFIELD::real_t fac,
                    const INDEX& block_index)
 {
+  if (partial_xy_block(block_index)) {
+    update_partial_blocks(v,a,w,ieo,fac,block_index,true);
+    return;
+  }
+
   typedef typename AFIELD::real_t real_t;
 
   real_t *vp = v.ptr(0);
@@ -484,6 +530,11 @@ void block_axpy_eo(AFIELD& v, const typename AFIELD::complex_t *a,
                    const typename AFIELD::real_t fac,
                    const INDEX& block_index)
 {
+  if (partial_xy_block(block_index)) {
+    update_partial_blocks(v,a,w,ieo,fac,block_index,true);
+    return;
+  }
+
   typedef typename AFIELD::real_t    real_t;
   typedef typename AFIELD::complex_t complex_t;
 

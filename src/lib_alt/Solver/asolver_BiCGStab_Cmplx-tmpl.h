@@ -7,6 +7,8 @@
         @version $LastChangedRevision: 2499 $
 */
 
+#include <cstdlib>
+
 template<typename AFIELD>
 const std::string ASolver_BiCGStab_Cmplx<AFIELD>::class_name
   = "ASolver_BiCGStab_Cmplx";
@@ -32,6 +34,48 @@ namespace {
     w_norm2 = w.norm2();
   }
 #endif
+
+  // Generic fields keep their backend's vector operations and reductions.
+  template<class Field>
+  struct BiCGSeparate {
+    using complex_t = typename Field::complex_t;
+    using real_t = typename Field::real_t;
+    static void direction(Field& p, complex_t minus_omega, complex_t beta,
+                          const Field& v, const Field& r)
+    {
+      axpy(p, minus_omega, v);
+      aypx(beta, p, r);
+    }
+    static real_t solution(Field& x, complex_t omega, complex_t alpha,
+                           Field& r, const Field& p, const Field& t)
+    {
+      axpy(x, omega, r);
+      axpy(x, alpha, p);
+      axpy(r, -omega, t);
+      return norm2(r);
+    }
+  };
+
+  template<class Field>
+  struct BiCGUpdates : BiCGSeparate<Field> {};
+
+#ifdef QXS_AFIELD_INC_INCLUDED
+  template<class T>
+  struct BiCGUpdates<AField<T, QXS> > {
+    using Field = AField<T, QXS>;
+    using complex_t = typename Field::complex_t;
+    static void direction(Field& p, complex_t minus_omega, complex_t beta,
+                          const Field& v, const Field& r)
+    {
+      p.bicg_update_p(minus_omega, beta, v, r);
+    }
+    static T solution(Field& x, complex_t omega, complex_t alpha, Field& r,
+                      const Field& p, const Field& t)
+    {
+      return x.bicg_update_xr(omega, alpha, r, p, t);
+    }
+  };
+#endif
 }
 
 //====================================================================
@@ -45,6 +89,9 @@ void ASolver_BiCGStab_Cmplx<AFIELD>::init(void)
   int nin  = m_fopr->field_nin();
   int nvol = m_fopr->field_nvol();
   int nex  = m_fopr->field_nex();
+
+  const char *fused = std::getenv("CLOVER_BICG_FUSED");
+  m_use_fused = AFIELD::IMPL == QXS && (!fused || std::string(fused) != "0");
 
   m_r.reset(nin, nvol, nex);
   m_p.reset(nin, nvol, nex);
@@ -398,8 +445,11 @@ void ASolver_BiCGStab_Cmplx<AFIELD>::solve_step(real_t& rr, int& iflg, coeff_t& 
   complex_t bet = rho * prev.alpha / (prev.rho * prev.omega);
 
   // p = r + bet * (p - omega_prev * v);
-  axpy(m_p, -prev.omega, m_v);
-  aypx(bet, m_p, m_r);
+  if (m_use_fused) {
+    BiCGUpdates<AFIELD>::direction(m_p, -prev.omega, bet, m_v, m_r);
+  } else {
+    BiCGSeparate<AFIELD>::direction(m_p, -prev.omega, bet, m_v, m_r);
+  }
 
   m_fopr->mult(m_v, m_p);
 
@@ -422,12 +472,15 @@ void ASolver_BiCGStab_Cmplx<AFIELD>::solve_step(real_t& rr, int& iflg, coeff_t& 
   axpy(m_r, -alpha, m_v);
   m_fopr->mult(m_t, m_r);
 
-  // todo: use something like dotc_and_norm2()
-  //  complex_t omega_n = dotc(m_t, m_r);
-  //  real_t omega_d = m_t.norm2();
   complex_t omega_n;
-  real_t    omega_d, s_norm2;
-  dotc_and_norm2(omega_n, omega_d, s_norm2, m_t, m_r);
+  real_t omega_d, s_norm2;
+  if (AFIELD::IMPL == QXS && !m_use_fused) {
+    omega_n = dotc(m_t, m_r);
+    omega_d = norm2(m_t);
+    s_norm2 = norm2(m_r);
+  } else {
+    dotc_and_norm2(omega_n, omega_d, s_norm2, m_t, m_r);
+  }
   complex_t omega = omega_n / omega_d;
 
   // for omega prescription
@@ -450,16 +503,15 @@ void ASolver_BiCGStab_Cmplx<AFIELD>::solve_step(real_t& rr, int& iflg, coeff_t& 
   }
 
   // x = x + omega "s" + alpha p
-  axpy(m_x, omega, m_r);
-  axpy(m_x, alpha, m_p);
-
-  // "r" below is the residual vector
-  axpy(m_r, -omega, m_t);
+  if (m_use_fused) {
+    rr = BiCGUpdates<AFIELD>::solution(m_x, omega, alpha, m_r, m_p, m_t);
+  } else {
+    rr = BiCGSeparate<AFIELD>::solution(m_x, omega, alpha, m_r, m_p, m_t);
+  }
 
   prev.rho   = rho;
   prev.alpha = alpha;
   prev.omega = omega;
-  rr         = norm2(m_r);
 }
 
 
