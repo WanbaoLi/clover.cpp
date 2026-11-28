@@ -1,7 +1,7 @@
-#include "lib/bridge_setup.h"
-#include "Action/Gauge/action_G_Rectangle.h"
+#include "runtime/bridge_setup.h"
+#include "gauge/action_G_Rectangle.h"
 #include "field.hpp"
-#include "ResourceManager/threadManager.h"
+#include "runtime/threadManager.h"
 #include <cstdio>
 #include <fstream>
 #include <iomanip>

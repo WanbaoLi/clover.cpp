@@ -1,5 +1,5 @@
 #pragma once
-#include "lib/bridge_setup.h"
+#include "runtime/bridge_setup.h"
 #include <algorithm>
 #include <array>
 #include <cmath>

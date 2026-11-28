@@ -1,0 +1,36 @@
+/*!
+        @file    force_G.cpp
+
+        @brief
+
+        @author  Yusuke Namekawa (namekawa)
+                 $LastChangedBy: aoyama $
+
+        @date    $LastChangedDate:: 2019-01-21 17:01:33 #$
+
+        @version $LastChangedRevision: 1928 $
+*/
+
+#include "force/force_G.h"
+
+#ifdef USE_FACTORY
+
+#ifdef USE_FACTORY_AUTOREGISTER
+#else
+// setup factories for all subclasses
+
+#include "force/force_G_Rectangle.h"
+
+bool Force_G::init_factory()
+{
+  bool result = true;
+
+  result &= Force_G_Rectangle::register_factory();
+
+  return result;
+}
+
+
+#endif /* USE_FACTORY_AUTOREGISTER */
+
+#endif /* USE_FACTORY */

@@ -1,0 +1,101 @@
+/*!
+        @file    force_F_Wilson_Nf2.h
+        @brief
+        @author  Hideo Matsufuru (matufuru)
+                 $LastChangedBy: matufuru $
+        @date    $LastChangedDate:: 2026-02-05 20:40:12 #$
+        @version $LastChangedRevision: 2693 $
+*/
+
+#ifndef FORCE_F_WILSON_NF2_INCLUDED
+#define FORCE_F_WILSON_NF2_INCLUDED
+
+#include <string>
+#include <vector>
+
+#include "force/force_F.h"
+#include "operator/fopr_Wilson.h"
+#include "field/field_F.h"
+#include "io/bridgeIO.h"
+using Bridge::vout;
+
+//! Force for the standard Wilson fermion operator
+
+/*!
+    This class calculates the force of the standard Wilson fermion.
+    The gamma matrix representation is given as control string
+    "Dirac"(default) or "Chiral" at the construction, which is
+    used to construct the Fopr_Wilson instance.
+                                     [23 Dec 2011 H.Matusfuru]
+    YAML is implemented.             [14 Nov 2012 Y.Namekawa]
+    Multi-threading applied.         [05 Jan 2026 H.Matsufuru]
+ */
+
+class Force_F_Wilson_Nf2 : public Force
+{
+ public:
+  static const std::string class_name;
+
+ private:
+  double m_kappa;               //!< hopping parameter
+  std::vector<int> m_boundary;  //!< boundary conditions
+  std::string m_repr;           //!< gamma-matrix representation
+  Bridge::VerboseLevel m_vl ;   //!< verbose level
+
+  Fopr_Wilson *m_fopr_w;        //!< fermion operator
+
+  Field_F *m_zeta;
+  Field_F *m_eta;
+  Field_F *m_eta2;
+  Field_F *m_eta3;
+
+  Field_G *m_force1;
+
+ public:
+  DEPRECATED
+  Force_F_Wilson_Nf2(){ init("Dirac"); }
+
+  DEPRECATED
+  Force_F_Wilson_Nf2(const std::string repr){ init(repr); }
+
+  //! constructior with parameters.
+  Force_F_Wilson_Nf2(const Parameters& params){ init(params); }
+
+  //! destructor.
+  ~Force_F_Wilson_Nf2(){ tidyup(); }
+
+  void set_parameters(const Parameters& params);
+
+  void set_parameters(const double kappa, const std::vector<int> bc);
+
+  void get_parameters(Parameters& params) const;
+
+  void set_config(Field *U);
+
+  void force_udiv(Field& force, const Field& eta);
+
+  void force_udiv1(Field& force, const Field& zeta, const Field& eta);
+
+ private:
+  //! standard intial setup.
+  void init(const Parameters& params);
+
+  //! obsolete intial setup (to be discarded).
+  void init(const std::string repr);
+
+  //! final clean-up.
+  void tidyup();
+
+  //! setting parameters by Parameters without parameter propagation.
+  void set_parameters_impl(const Parameters& params);
+
+  //! setting parameters by values without parameter propagation.
+  void set_parameters_impl(const double kappa, const
+                           std::vector<int> bc);
+
+  //! implementation of force calculation.
+  void force_udiv1_impl(Field_G& force,
+                        const Field_F& zeta, const Field_F& eta);
+
+};
+#endif

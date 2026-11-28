@@ -1,8 +1,8 @@
 // On the unit gauge, a plane wave at temporal momentum pi/T has an analytic D norm.
-#include "lib/bridge_setup.h"
-#include "lib/Fopr/fopr_Clover.h"
-#include "lib/Field/field_F.h"
-#include "lib/Field/field_G.h"
+#include "runtime/bridge_setup.h"
+#include "operator/fopr_Clover.h"
+#include "field/field_F.h"
+#include "field/field_G.h"
 #include <cmath>
 #include <cstdio>
 int main(int argc,char** argv) {

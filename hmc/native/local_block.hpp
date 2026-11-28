@@ -1,5 +1,5 @@
 #pragma once
-#include "Force/Fermion/force_F_Clover_Nf2.h"
+#include "force/force_F_Clover_Nf2.h"
 #include <stdexcept>
 #include <array>
 #include <algorithm>

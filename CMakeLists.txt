@@ -7,72 +7,60 @@ find_package(MPI REQUIRED COMPONENTS CXX)
 find_package(OpenMP REQUIRED COMPONENTS CXX)
 include(CTest)
 
-set(CLOVER_QXS "general" CACHE STRING "QXS backend: general or sve512")
-set_property(CACHE CLOVER_QXS PROPERTY STRINGS general sve512)
-set(qxs_inline_source inline_General)
+set(CLOVER_QXS "general" CACHE STRING "CPU kernel backend: general, avx512 or sve512")
+set_property(CACHE CLOVER_QXS PROPERTY STRINGS general avx512 sve512)
+set(kernel_headers portable)
 if(CLOVER_QXS STREQUAL "sve512")
-  include(CheckCXXSourceCompiles)
-  set(qxs_sve_flags -march=armv8.2-a+sve+sve2 -msve-vector-bits=512)
-  string(JOIN " " CMAKE_REQUIRED_FLAGS ${qxs_sve_flags})
-  check_cxx_source_compiles([=[
+  set(kernel_headers sve512)
+  set(kernel_flags -march=armv8.2-a+sve+sve2 -msve-vector-bits=512)
+  set(kernel_probe [=[
 #include <arm_sve.h>
 static_assert(__ARM_FEATURE_SVE_BITS == 512, "Expected 512-bit SVE");
 int main() { return 0; }
-]=] CLOVER_HAS_SVE512_COMPILER)
-  unset(CMAKE_REQUIRED_FLAGS)
-  if(NOT CLOVER_HAS_SVE512_COMPILER)
-    message(FATAL_ERROR "sve512 requires an AArch64 compiler with 512-bit SVE2 support")
-  endif()
-  set(qxs_inline_source inline_ACLE)
+]=])
+elseif(CLOVER_QXS STREQUAL "avx512")
+  set(kernel_flags -mavx512f -mprefer-vector-width=512)
+  set(kernel_probe [=[
+#include <immintrin.h>
+#ifndef __AVX512F__
+#error AVX-512F required
+#endif
+int main() { return 0; }
+]=])
 elseif(NOT CLOVER_QXS STREQUAL "general")
-  message(FATAL_ERROR "Use -DCLOVER_QXS=general or sve512")
+  message(FATAL_ERROR "Use -DCLOVER_QXS=general, avx512 or sve512")
 endif()
-
-# Generate the upstream configuration headers inside the build tree.
-set(generated "${CMAKE_CURRENT_BINARY_DIR}/generated")
-set(bridge_version "${PROJECT_VERSION}")
-file(CONFIGURE OUTPUT "${generated}/version.h"
-  CONTENT "#define BRIDGE_VERSION \"${bridge_version}\"\n")
-
-set(qxs_inline "${generated}/lib_alt_QXS/inline")
-file(GLOB inline_headers CONFIGURE_DEPENDS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-  "src/lib_alt_QXS/${qxs_inline_source}/*.h" "src/lib_alt_QXS/inline_common/*.h")
-foreach(header IN LISTS inline_headers)
-  get_filename_component(name "${header}" NAME)
-  if(NOT name STREQUAL "define_vlen.h")
-    configure_file("${header}" "${qxs_inline}/${name}" COPYONLY)
+if(kernel_flags)
+  include(CheckCXXSourceCompiles)
+  string(JOIN " " CMAKE_REQUIRED_FLAGS ${kernel_flags})
+  check_cxx_source_compiles("${kernel_probe}" CLOVER_HAS_${CLOVER_QXS}_COMPILER)
+  unset(CMAKE_REQUIRED_FLAGS)
+  if(NOT CLOVER_HAS_${CLOVER_QXS}_COMPILER)
+    message(FATAL_ERROR "Compiler does not support ${CLOVER_QXS} kernel flags: ${kernel_flags}")
   endif()
-endforeach()
-configure_file(src/lib_alt_QXS/${qxs_inline_source}/define_vlen.h "${generated}/upstream_vlen.h" COPYONLY)
-file(READ "${generated}/upstream_vlen.h" vlen)
-if(CLOVER_QXS STREQUAL "general")
-  # 24^3 needs FP32 2x2 packing with 4x4 SAP blocks in XY.
-  string(REGEX REPLACE "(#define VLENS[ \t]+)16" "\\14" vlen "${vlen}")
-  string(REGEX REPLACE "(#define VLEN[XY]S[ \t]+)4" "\\12" vlen "${vlen}")
 endif()
-file(CONFIGURE OUTPUT "${qxs_inline}/define_vlen.h" CONTENT "${vlen}" @ONLY)
 
-file(GLOB_RECURSE bridge_sources CONFIGURE_DEPENDS
-  "src/lib/*.cpp" "src/lib_alt/*.cpp" "src/lib_alt_QXS/*.cpp")
-set(qxs_precision_sources
-  src/lib_alt_QXS/BridgeQXS/bridgeQXS_Clover.cpp
-  src/lib_alt_QXS/BridgeQXS/bridgeQXS_Wilson.cpp
-  src/lib_alt_QXS/Field/afield.cpp
-  src/lib_alt_QXS/Fopr/afopr_Clover.cpp
-  src/lib_alt_QXS/Solver/asolver_SAP_MINRES.cpp)
-foreach(source IN LISTS qxs_precision_sources)
-  list(REMOVE_ITEM bridge_sources "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
+set(generated "${CMAKE_CURRENT_BINARY_DIR}/generated")
+file(CONFIGURE OUTPUT "${generated}/version.h"
+  CONTENT "#define BRIDGE_VERSION \"${PROJECT_VERSION}\"\n")
+
+file(GLOB_RECURSE bridge_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB kernel_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.cpp")
+if(kernel_flags)
+  set_source_files_properties(${kernel_sources} PROPERTIES COMPILE_OPTIONS "${kernel_flags}")
+endif()
+set(qxs_precision_sources)
+foreach(name afield afopr_Clover asolver_SAP_MINRES bridgeQXS_Clover bridgeQXS_Wilson)
+  list(APPEND qxs_precision_sources "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/${name}.cpp")
 endforeach()
+list(REMOVE_ITEM bridge_sources ${qxs_precision_sources})
 
 add_library(bridge_config INTERFACE)
-target_include_directories(bridge_config INTERFACE "${generated}" src src/lib src/lib_alt src/lib_alt_QXS)
+target_include_directories(bridge_config INTERFACE "${generated}" src "src/kernels/${kernel_headers}")
 target_compile_definitions(bridge_config INTERFACE PC_GNU USE_MPI USE_GROUP_SU3
   USE_OPENMP USE_STD_COMPLEX LIB_CPP11 USE_FACTORY USE_ALT_CODE USE_ALT_QXS
   OMPI_SKIP_MPICXX)
 target_link_libraries(bridge_config INTERFACE MPI::MPI_CXX OpenMP::OpenMP_CXX m)
-if(CLOVER_QXS STREQUAL "sve512")
-  target_compile_options(bridge_config INTERFACE ${qxs_sve_flags})
-endif()
 
 add_library(bridge STATIC ${bridge_sources})
 target_link_libraries(bridge PUBLIC bridge_config)

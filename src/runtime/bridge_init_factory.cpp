@@ -1,0 +1,64 @@
+/*!
+        @file    bridge_init_factory.cpp
+
+        @brief
+
+        @author  Tatsumi Aoyama  (aoym)
+                 $LastChangedBy: matufuru $
+
+        @date    $LastChangedDate:: 2025-08-20 16:24:03 #$
+
+        @version $LastChangedRevision: 2653 $
+*/
+
+#include "runtime/bridge_init_factory.h"
+
+#ifdef USE_FACTORY
+
+#include "operator/fopr.h"
+#include "force/force_G.h"
+#include "runtime/randomNumbers.h"
+#include "math/gammaMatrixSet.h"
+
+#ifdef USE_FACTORY_AUTOREGISTER
+#else
+
+bool bridge_init_factory()
+{
+  bool result = true;
+
+  result &= Fopr::init_factory();
+  result &= Force_G::init_factory();
+  result &= RandomNumbers::init_factory();
+  result &= GammaMatrixSet::init_factory();
+
+  return result;
+}
+
+#endif /* USE_FACTORY_AUTOREGISTER */
+
+#ifdef DEBUG
+void bridge_report_factory()
+{
+  vout.general("------------------------------------------------\n");
+  vout.general("Factory entries\n");
+  vout.general("------------------------------------------------\n");
+
+  Fopr::Factory_noarg::print("Fopr(void)");
+  Fopr::Factory_fopr::print("Fopr(Fopr*)");
+  Fopr::Factory_fopr_director::print("Fopr(Fopr*, Director*)");
+  Fopr::Factory_string::print("Fopr(string)");
+
+  Force_G::Factory::print("Force_G");
+
+  RandomNumbers::Factory_int::print("RandomNumbers(int)");
+  RandomNumbers::Factory_file::print("RandomNumbers(string)");
+
+  GammaMatrixSet::Factory::print("GammaMatrixSet");
+
+  vout.general("------------------------------------------------\n");
+}
+
+#endif
+
+#endif /* USE_FACTORY */

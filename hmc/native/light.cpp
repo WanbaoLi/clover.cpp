@@ -45,12 +45,12 @@ inline int chronological_guess(OddSchur& M,const SolutionHistory& stored,const F
 #include "../../solver/clover_sap_geometry.hpp"
 #include <cstdlib>
 #if defined(USE_ALT_CODE) && defined(USE_ALT_QXS)
-#include "lib_alt_QXS/Field/afield.h"
-#include "lib_alt_QXS/Field/afield-inc.h"
-#include "lib_alt_QXS/Fopr/afopr_Clover.h"
-#include "lib_alt_QXS/Fopr/afopr_Clover_dd.h"
-#include "lib_alt_QXS/inline/define_vlen.h"
-#include "lib_alt/Solver/asolver_MG.h"
+#include "field/afield.h"
+#include "field/afield-inc.h"
+#include "operator/afopr_Clover.h"
+#include "operator/afopr_Clover_dd.h"
+#include "define_vlen.h"
+#include "solver/asolver_MG.h"
 #endif
 
 namespace hmc_light {

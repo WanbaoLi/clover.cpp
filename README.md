@@ -62,8 +62,27 @@ to select an interpreter. To run one small test trajectory:
 The resume and export commands share the same checkpoint format. See
 build/bin/clover-hmc run --help for the archived Chroma restart option.
 
-The default QXS build uses the generic implementation. On AArch64,
-CMake accepts -DCLOVER_QXS=sve512 with a supporting SVE2 toolchain.
+## CPU kernels and source layout
+
+Use the same CMake targets for all three CPU modes.
+
+- `general` (default) uses portable kernels.
+- `avx512` compiles the portable kernels with AVX-512F and prefers 512-bit
+  auto-vectorization. Run this build on an AVX-512F CPU.
+- `sve512` uses ARM ACLE intrinsics. It requires an SVE2 toolchain and
+  512-bit SVE vector length at runtime.
+
+Select a mode with `cmake -S . -B build -DCLOVER_QXS=avx512` or use the
+corresponding value above. ISA flags apply only to sources in `src/kernels/`.
+
+| Directory | Code |
+| --- | --- |
+| `src/field/` | Scalar and packed lattice fields, indexing and sources |
+| `src/operator/` | Wilson–Clover operators and coarse/blocked variants |
+| `src/solver/` | MG setup, SAP, GCR and scalar fallback |
+| `src/force/`, `src/gauge/` | Fermion and gauge forces, action and stout smearing |
+| `src/kernels/` | SIMD kernels, precision instantiations and selected backend headers |
+| `src/io/`, `src/runtime/`, `src/math/` | ILDG I/O, MPI/OpenMP setup and shared numerical tools |
 
 ## Solver choices
 
