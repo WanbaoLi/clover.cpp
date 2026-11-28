@@ -222,12 +222,7 @@ void ASolver_MG<AFIELD>::init_solver(std::string mode)
   init_coarse_grid();
 
   // outer solver
-  if (m_params_asolver_outer.is_set("outer_solver") &&
-      m_params_asolver_outer.get_string("outer_solver") == "gcr") {
-    m_outer_solver.reset(new ASolver_GCR<AFIELD>(m_afopr_fineD, m_prec_mg.get()));
-  } else {
-    m_outer_solver.reset(new OuterSolver_t<AFIELD>(m_afopr_fineD, m_prec_mg.get()));
-  }
+  m_outer_solver.reset(new ASolver_GCR<AFIELD>(m_afopr_fineD, m_prec_mg.get()));
   m_outer_solver->set_parameters(m_params_asolver_outer);
 }
 
@@ -535,10 +530,9 @@ void ASolver_MG<AFIELD>::solve(AFIELD& x, const AFIELD& b,
 
 
 template<typename AFIELD>
-int ASolver_MG<AFIELD>::outer_iterations(int operator_count) const
+int ASolver_MG<AFIELD>::outer_iterations() const
 {
-  const auto* gcr = dynamic_cast<const ASolver_GCR<AFIELD>*>(m_outer_solver.get());
-  return gcr ? gcr->iterations() : operator_count/2;
+  return static_cast<const ASolver_GCR<AFIELD>&>(*m_outer_solver).iterations();
 }
 
 

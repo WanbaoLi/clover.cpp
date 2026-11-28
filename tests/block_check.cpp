@@ -1,7 +1,8 @@
 #include "bridge_setup.h"
 #include "bridge_init_factory.h"
 #include "lib/IO/gaugeConfig.h"
-#include "lib/Fopr/fopr.h"
+#include "lib/Fopr/fopr_Clover.h"
+#include "lib/Fopr/fopr_Wilson.h"
 #include "lib/Field/field_F.h"
 #include "lib/Field/field_G.h"
 #include "lib_alt_QXS/Field/afield.h"
@@ -63,10 +64,11 @@ int main(int argc,char** argv) {
     p.set_double("hopping_parameter",.5/(4.-.279));p.set_double("clover_coefficient",1.160678675188);
     p.set_int_vector("boundary_condition",{1,1,1,-1});p.set_int_vector("block_size",block);
     p.set_string("verbose_level","Crucial");
-    std::unique_ptr<Fopr> c(Fopr::New("Clover",p)),w(Fopr::New("Wilson",p));
-    c->set_mode("D");w->set_mode("D");c->set_config(&u);w->set_config(&u);
-    c->mult(full,b);copy(ref,full);w->mult(tmp,b);axpy(ref,-1.,tmp);
-    w->set_config(&cut);w->mult(tmp,b);axpy(ref,1.,tmp);
+    Fopr_Clover c(p);
+    Fopr_Wilson w(p);
+    c.set_mode("D");w.set_mode("D");c.set_config(&u);w.set_config(&u);
+    c.mult(full,b);copy(ref,full);w.mult(tmp,b);axpy(ref,-1.,tmp);
+    w.set_config(&cut);w.mult(tmp,b);axpy(ref,1.,tmp);
     using Packed=AField<float,QXS>;
     AFopr_Clover_dd<Packed> dd(p);dd.set_config(&u);dd.set_mode("D");
     Packed x(24,n,1),out(24,n,1),hop(24,n,1),sum(24,n,1);

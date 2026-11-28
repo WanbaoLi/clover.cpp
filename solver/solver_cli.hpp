@@ -12,8 +12,8 @@
 
 struct SolveOptions {
   bool plan_layout=false, checkpoint=false, compact_eo=false, profile_mg=false;
-  bool mg_outer_requested=false;
-  std::string resume_from, precision="double", mg_outer="gcr";
+  bool gcr_restart_requested=false;
+  std::string resume_from, precision="double";
   std::string gauge, output, source = "point", fields = "full", method = "auto";
   std::vector<int> lattice, grid, position{0,0,0,0}, rhs, sap_block;
   double mass = -0.279, csw = 1.160678675188, rho = 0.125;
@@ -31,7 +31,7 @@ inline const char* solve_usage() {
          "  [--bicg-iters N] [--bicg-cycles N] [--compact-eo] [--checkpoint] [--resume-from DIRECTORY]\n"
          "  [--threads N] [--nvec N] [--setup-steps N] [--smooth-iters N] [--profile-mg]\n"
          "  [--sap-block X,Y,Z,T] [--mg-max-iters N] [--precision single|double]\n"
-         "  [--mg-outer fbicgstab|gcr] [--gcr-restart N]\n";
+         "  [--gcr-restart N]\n";
 }
 inline int solve_int(const std::string& s) {
   char* end=nullptr;
@@ -110,14 +110,9 @@ inline SolveOptions solve_options(int argc,char** argv) {
       if (o.mg_max_iters<1 || o.mg_max_iters>(std::numeric_limits<int>::max()-1)/2)
         throw std::runtime_error("--mg-max-iters out of range");
     }
-    else if (k=="--mg-outer") {
-      if (v!="fbicgstab" && v!="gcr") throw std::runtime_error("--mg-outer must be fbicgstab or gcr");
-      o.mg_outer=v;
-      o.mg_outer_requested=true;
-    }
     else if (k=="--gcr-restart") {
       o.gcr_restart=solve_int(v);
-      o.mg_outer_requested=true;
+      o.gcr_restart_requested=true;
       if (o.gcr_restart<1) throw std::runtime_error("--gcr-restart must be positive");
     }
     else if (k=="--nvec") o.vectors=solve_int(v);
@@ -138,8 +133,6 @@ inline SolveOptions solve_options(int argc,char** argv) {
     throw std::runtime_error("invalid mass, tolerance, thread count, or multigrid parameters");
   if (std::set<int>(o.rhs.begin(),o.rhs.end()).size()!=o.rhs.size() || *std::min_element(o.rhs.begin(),o.rhs.end())<0 || *std::max_element(o.rhs.begin(),o.rhs.end())>=12)
     throw std::runtime_error("source columns must be distinct integers from 0 through 11");
-  if (seen.count("--gcr-restart") && o.mg_outer!="gcr")
-    throw std::runtime_error("--gcr-restart requires --mg-outer gcr");
   if (o.compact_eo && o.method!="eo-bicgstab") throw std::runtime_error("--compact-eo requires --method eo-bicgstab");
   return o;
 }

@@ -17,14 +17,6 @@
 
 #include "Fopr/fopr.h"
 #include "Force/Gauge/force_G.h"
-//#include "Force/Fermion/forceSmear.h"
-#include "Smear/forceSmear.h"
-#include "Solver/solver.h"
-#include "Action/action.h"
-#include "Smear/smear.h"
-#include "Smear/projection.h"
-#include "Measurements/Gauge/staple.h"
-#include "Measurements/Fermion/source.h"
 #include "Tools/randomNumbers.h"
 #include "Tools/gammaMatrixSet.h"
 
@@ -37,19 +29,11 @@ bool bridge_init_factory()
 
   result &= Fopr::init_factory();
   result &= Force_G::init_factory();
-  result &= ForceSmear::init_factory();
-  result &= Solver::init_factory();
-  result &= Action::init_factory();
-  result &= Projection::init_factory();
-  result &= Smear::init_factory();
-  result &= Source::init_factory();
-  result &= Staple::init_factory();
   result &= RandomNumbers::init_factory();
   result &= GammaMatrixSet::init_factory();
 
   return result;
 }
-
 
 #endif /* USE_FACTORY_AUTOREGISTER */
 
@@ -67,20 +51,6 @@ void bridge_report_factory()
 
   Force_G::Factory::print("Force_G");
 
-  ForceSmear::Factory::print("ForceSmear");
-
-  Solver::Factory::print("Solver");
-
-  Action::Factory::print("Action");
-
-  Projection::Factory::print("Projection");
-  Smear::Factory::print("Smear");
-
-
-  Source::Factory::print("Source");
-
-  Staple::Factory::print("Staple");
-
   RandomNumbers::Factory_int::print("RandomNumbers(int)");
   RandomNumbers::Factory_file::print("RandomNumbers(string)");
 
@@ -88,7 +58,6 @@ void bridge_report_factory()
 
   vout.general("------------------------------------------------\n");
 }
-
 
 #endif
 

@@ -19,14 +19,12 @@
 #else
 // setup factories for all subclasses
 
-#include "force_G_Plaq.h"
 #include "force_G_Rectangle.h"
 
 bool Force_G::init_factory()
 {
   bool result = true;
 
-  result &= Force_G_Plaq::register_factory();
   result &= Force_G_Rectangle::register_factory();
 
   return result;

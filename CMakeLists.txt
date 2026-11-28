@@ -54,8 +54,6 @@ file(CONFIGURE OUTPUT "${qxs_inline}/define_vlen.h" CONTENT "${vlen}" @ONLY)
 
 file(GLOB_RECURSE bridge_sources CONFIGURE_DEPENDS
   "src/lib/*.cpp" "src/lib_alt/*.cpp" "src/lib_alt_QXS/*.cpp")
-list(FILTER bridge_sources EXCLUDE REGEX
-  "/(Field|Force/Fermion)/Org/")
 add_library(bridge STATIC ${bridge_sources})
 target_include_directories(bridge PUBLIC "${generated}"
   src src/lib src/lib_alt src/lib_alt_QXS)
@@ -76,12 +74,8 @@ endif()
 add_executable(clover-solve solver/clover_solve.cpp)
 target_link_libraries(clover-solve PRIVATE bridge)
 
-add_executable(bridge-hmc sample_hmc/sample_HMC_Wilson_Leapfrog_Nf2.cpp)
-target_link_libraries(bridge-hmc PRIVATE bridge)
-
-# The existing solver keeps its CLI and the two-flavor generator remains available.
 add_subdirectory(hmc)
-install(TARGETS clover-solve bridge-hmc RUNTIME DESTINATION bin)
+install(TARGETS clover-solve RUNTIME DESTINATION bin)
 
 if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
   add_executable(clover-base-check tests/base_operator.cpp)

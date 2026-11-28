@@ -27,13 +27,14 @@ class ASolver_GCR : public ASolver<Field>
   {
     const long long budget = static_cast<long long>(parameters.get_int("maximum_number_of_iteration"))
                            * parameters.get_int("maximum_number_of_restart");
-    const int restart = parameters.get_int("gcr_restart");
+    const int restart = parameters.is_set("gcr_restart") ? parameters.get_int("gcr_restart") : 16;
     if (budget < 1 || budget > (std::numeric_limits<int>::max()-2)/2 || restart < 1)
       throw std::runtime_error("invalid GCR iteration budget or restart length");
     m_budget = static_cast<int>(budget);
     const int window = std::min(restart, m_budget);
     m_recursive = parameters.get_double("convergence_criterion_squared");
-    m_verified = parameters.get_double("gcr_verified_criterion_squared");
+    m_verified = parameters.is_set("gcr_verified_criterion_squared")
+      ? parameters.get_double("gcr_verified_criterion_squared") : m_recursive;
     m_directions.resize(window);
     m_images.resize(window);
     const int nin = m_op->field_nin(), nvol = m_op->field_nvol(), nex = m_op->field_nex();
@@ -62,7 +63,6 @@ class ASolver_GCR : public ASolver<Field>
     double vector_cost = 0, residual2 = 0;
     bool refreshed = true;
     if (b2 > 0) {
-      // Use the same RHS initial guess as the existing FBiCGStab path.
       copy(x, b);
       residual2 = refresh(x, b, applications, vector_cost);
       while (iterations < m_budget && std::isfinite(residual2) &&

@@ -43,7 +43,7 @@ The light-quark run follows the C24P34 entry in the supplied PyQUDA input:
 rho 0.125, antiperiodic time, t=0 wall source, at most 1000 outer iterations. The script uses SAP blocks 6×6×6×4,
 24 Bridge++ setup vectors, four setup refinement steps and four smoothing
 sweeps. The default outer solver is GCR. All twelve columns share one MG
-hierarchy. Results are under `build/mg-c24p34-<outer>.*/`.
+hierarchy. Results are under `build/mg-c24p34-gcr.*/`.
 
 The benchmark reports one and twelve columns for both precisions. Pass single
 or double to run one precision. The FP32 and FP64 true residual limits are 1e-6
@@ -61,19 +61,17 @@ to select an interpreter. To run one small test trajectory:
 
 The resume and export commands share the same checkpoint format. See
 build/bin/clover-hmc run --help for the archived Chroma restart option.
-The original Wilson Nf=2 generator remains available as build/bridge-hmc.
 
 The default QXS build uses the generic implementation. On AArch64,
 CMake accepts -DCLOVER_QXS=sve512 with a supporting SVE2 toolchain.
 
-## MG outer solver
+## Solver choices
 
-The default MG outer solver is restarted flexible GCR with restart length 16.
-Use `--method mg --mg-outer fbicgstab` to select flexible BiCGStab. The fine
-operator, MG setup, coarse solver and SAP smoother are shared by both modes.
-`outer_loops` counts the GCR steps, while `nconv` includes fine-operator
-applications used to refresh the GCR residual. The independently checked
-full-field residual remains the acceptance criterion.
+The MG outer solver is restarted flexible GCR, with restart length 16.
+The independent full-field residual is the acceptance criterion.
+Auto layout uses scalar BiCGStab when the MPI grid cannot pack the MG levels.
+Scalar and even-odd BiCGStab also support checkpoint and resume.
 
-Run `tests/benchmark_mg_c24p34.sh all gcr` for the one- and twelve-column
-measurements. Omit the second argument to benchmark the default solver.
+The HMC light-quark worker defaults to CG on the normal equation, with
+optional MG correction via `clover-hmc run --light-solver mg`. The strange-quark rational approximation uses
+multishift CG.

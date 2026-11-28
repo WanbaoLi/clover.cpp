@@ -43,7 +43,6 @@ using FoprF_t      = AFopr_Clover_dd<AField_f>;
 using FoprCoarse_t = AFopr_Clover_coarse<AField_f>;
 
 // solver types
-template<class Field> using OuterSolver_t = ASolver_FBiCGStab<Field>;
 using CoarseSolver_t = ASolver_BiCGStab_Cmplx<AField_f>;
 using Smoother_t = ASolver_SAP<AField_f>;
 

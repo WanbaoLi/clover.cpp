@@ -42,7 +42,6 @@ class ASolver_MG : public ASolver<AFIELD>
   //using FoprCoarse_t = AFopr_Clover_coarse<AFIELD_f >;
 
   // solver types: should be given in the .cpp file
-  //using OuterSolver_t  = ASolver_FBiCGStab<AFIELD>;
   //using CoarseSolver_t = ASolver_BiCGStab_Cmplx< AFIELD_f>;
   //using Smoother_t     = ASolver_SAP<AFIELD_f>;
 
@@ -169,7 +168,7 @@ class ASolver_MG : public ASolver<AFIELD>
   //! returns the floating point operation count [setup].
   double flop_count_setup();
 
-  int outer_iterations(int operator_count) const;
+  int outer_iterations() const;
   void reset_flop_count();
 
  protected:

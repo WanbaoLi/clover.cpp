@@ -2,6 +2,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+if (( $# > 1 )); then
+  echo "Usage: $0 [single|double|all]" >&2
+  exit 2
+fi
+
 export PATH="/public2/software/mpi/openmpi/4.1.4/gnu/bin:$PATH"
 export OMP_NUM_THREADS=16 OMP_PLACES=cores OMP_PROC_BIND=close OMP_DYNAMIC=false
 cfg="$HOME/Configure_clover/beta6.20_mu-0.2770_ms-0.2310_L24x64/beta6.20_mu-0.2770_ms-0.2310_L24x64_cfg_20000.lime"
@@ -11,14 +16,9 @@ test -r "$cfg" || { echo "Missing C24P34 cfg20000: $cfg" >&2; exit 1; }
 case ${1:-all} in
   single|double) precisions=("$1") ;;
   all) precisions=(single double) ;;
-  *) echo "Usage: $0 [single|double|all] [fbicgstab|gcr]" >&2; exit 2 ;;
+  *) echo "Usage: $0 [single|double|all]" >&2; exit 2 ;;
 esac
-outer=${2:-gcr}
-case "$outer" in
-  fbicgstab|gcr) ;;
-  *) echo "Unknown MG outer solver: $outer" >&2; exit 2 ;;
-esac
-out=$(mktemp -d "build/mg-c24p34-$outer.XXXXXX")
+out=$(mktemp -d "build/mg-c24p34-gcr.XXXXXX")
 printf 'precision\tcolumns\touter_iters\tmax_true_residual\tmg_setup_s\tsolve_s\n' | tee "$out/timing.tsv"
 
 for precision in "${precisions[@]}"; do
@@ -29,7 +29,7 @@ for precision in "${precisions[@]}"; do
     if [[ $rhs == all ]]; then expected=12; fi
     if ! mpirun -np 16 --map-by ppr:2:numa:PE=16 --bind-to core \
       --mca pml ob1 --mca btl self,vader \
-      build/clover-solve --method mg --mg-outer "$outer" --lattice 24,24,24,64 --grid 1,1,2,8 \
+      build/clover-solve --method mg --lattice 24,24,24,64 --grid 1,1,2,8 \
       --threads "$OMP_NUM_THREADS" --gauge "$cfg" --source wall --position 0,0,0,0 \
       --rhs "$rhs" --mass -0.277 --csw 1.16092022578464 --rho 0.125 \
       --sap-block 6,6,6,4 --mg-max-iters 1000 --profile-mg --nvec 24 --setup-steps 4 --smooth-iters 4 \

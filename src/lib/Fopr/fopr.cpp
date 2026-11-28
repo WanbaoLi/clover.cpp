@@ -21,39 +21,13 @@
 #else
 // setup factories for all subclasses
 
-#include "fopr_Wilson.h"
-#include "Org/fopr_Wilson_impl.h"
-#include "Imp/fopr_Wilson_impl.h"
-#include "fopr_Wilson_eo.h"
-#include "Org/fopr_Wilson_eo_impl.h"
-#include "Imp/fopr_Wilson_eo_impl.h"
 #include "fopr_Clover.h"
-#include "fopr_Clover_eo.h"
-#include "fopr_Rational.h"
-#include "fopr_Smeared.h"
-#include "fopr_Smeared_eo.h"
-#include "fopr_Chebyshev.h"
 
 template<>
 bool Fopr::init_factory()
 {
-  bool result = true;
-  result &= Selector_Fopr_Wilson::register_factory();
-  result &= Org::Fopr_Wilson::register_factory();
-  result &= Imp::Fopr_Wilson::register_factory();
-  result &= Selector_Fopr_Wilson_eo::register_factory();
-  result &= Org::Fopr_Wilson_eo::register_factory();
-  result &= Imp::Fopr_Wilson_eo::register_factory();
-  result &= Fopr_Clover::register_factory();
-  result &= Fopr_Clover_eo::register_factory();
-  result &= Fopr_Rational::register_factory();
-  result &= Fopr_Smeared::register_factory();
-  result &= Fopr_Smeared_eo::register_factory();
-  result &= Fopr_Chebyshev::register_factory();
-
-  return result;
+  return Fopr_Clover::register_factory();
 }
-
 
 #endif /* USE_FACTORY_AUTOREGISTER */
 
